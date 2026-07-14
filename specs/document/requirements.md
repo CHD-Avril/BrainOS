@@ -1,6 +1,6 @@
 ---
 module: document
-status: review
+status: approved
 depends_on: [foundation, auth, knowledge]
 updated_at: 2026-07-14
 ---

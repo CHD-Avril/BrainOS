@@ -1,6 +1,6 @@
 ---
 module: knowledge
-status: review
+status: approved
 ---
 
 # Knowledge 模块任务

@@ -1,6 +1,6 @@
 ---
 module: admin
-status: review
+status: approved
 depends_on: [auth]
 updated_at: 2026-07-14
 ---

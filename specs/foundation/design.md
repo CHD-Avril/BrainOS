@@ -1,6 +1,6 @@
 ---
 module: foundation
-status: review
+status: approved
 depends_on: [overview]
 deliverables: [backend, frontend, compose, migrations, quality-scripts]
 ---

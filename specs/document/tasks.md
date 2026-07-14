@@ -1,6 +1,6 @@
 ---
 module: document
-status: review
+status: approved
 ---
 
 # Document 模块任务

@@ -1,6 +1,6 @@
 ---
 module: auth
-status: review
+status: approved
 depends_on: [foundation]
 updated_at: 2026-07-14
 ---

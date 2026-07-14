@@ -1,8 +1,8 @@
 module: auth
 stage: module
-status: review
-approved_by: null
+status: approved
+approved_by: Baron
 last_update: 2026-07-14
 depends_on:
   - foundation
-notes: 等待模块 Spec 审阅；批准后从 AU-1 开始。
+notes: 模块 Spec 已批准；按实施计划从 AU-1 开始。

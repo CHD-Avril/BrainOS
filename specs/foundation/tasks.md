@@ -1,6 +1,6 @@
 ---
 module: foundation
-status: review
+status: approved
 ---
 
 # Foundation 模块任务

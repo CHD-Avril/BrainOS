@@ -1,6 +1,6 @@
 ---
 module: foundation
-status: review
+status: approved
 depends_on: [overview]
 updated_at: 2026-07-14
 ---

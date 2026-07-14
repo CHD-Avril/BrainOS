@@ -1,6 +1,6 @@
 ---
 module: rag
-status: review
+status: approved
 depends_on: [auth, knowledge, document]
 updated_at: 2026-07-14
 ---

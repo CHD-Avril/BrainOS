@@ -1,6 +1,6 @@
 ---
 module: admin
-status: review
+status: approved
 ---
 
 # Admin 模块任务

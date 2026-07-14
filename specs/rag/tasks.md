@@ -1,6 +1,6 @@
 ---
 module: rag
-status: review
+status: approved
 ---
 
 # RAG 模块任务

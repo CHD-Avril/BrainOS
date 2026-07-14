@@ -1,6 +1,6 @@
 ---
 module: knowledge
-status: review
+status: approved
 depends_on: [auth]
 deliverables: [api, vue-page, tests]
 ---

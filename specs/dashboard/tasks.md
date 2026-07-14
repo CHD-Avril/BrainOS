@@ -1,6 +1,6 @@
 ---
 module: dashboard
-status: review
+status: approved
 ---
 
 # Dashboard 模块任务

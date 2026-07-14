@@ -1,6 +1,6 @@
 ---
 module: dashboard
-status: review
+status: approved
 depends_on: [auth, knowledge, document, rag]
 updated_at: 2026-07-14
 ---

@@ -1,6 +1,6 @@
 ---
 module: auth
-status: review
+status: approved
 ---
 
 # Auth 模块任务

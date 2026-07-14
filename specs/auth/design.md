@@ -1,6 +1,6 @@
 ---
 module: auth
-status: review
+status: approved
 depends_on: [foundation]
 deliverables: [api, security, tests]
 ---

@@ -1,6 +1,6 @@
 ---
 module: rag
-status: review
+status: approved
 depends_on: [auth, knowledge, document]
 deliverables: [api, retrieval, model-routing, sse, vue-page, tests]
 ---

@@ -1,6 +1,6 @@
 ---
 module: document
-status: review
+status: approved
 depends_on: [foundation, auth, knowledge]
 deliverables: [api, parser, indexer, chroma, vue-page, tests]
 ---

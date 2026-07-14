@@ -1,6 +1,6 @@
 ---
 module: admin
-status: review
+status: approved
 depends_on: [auth]
 deliverables: [user-api, audit-api, vue-pages, tests]
 ---
