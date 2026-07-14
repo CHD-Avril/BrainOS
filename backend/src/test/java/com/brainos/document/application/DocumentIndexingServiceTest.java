@@ -2,6 +2,7 @@ package com.brainos.document.application;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -96,9 +97,26 @@ class DocumentIndexingServiceTest {
 
         service.retry(7L, 44L);
 
-        verify(vectors).deleteDocument(44L);
-        verify(documents).markParsing(44L);
-        verify(dispatcher).submit(44L);
+        var ordered = inOrder(documents, vectors, dispatcher);
+        ordered.verify(documents).findById(44L);
+        ordered.verify(documents).markParsing(44L);
+        ordered.verify(vectors).deleteDocument(44L);
+        ordered.verify(dispatcher).submit(44L);
+    }
+
+    @Test
+    void losingConcurrentRetryNeverDeletesVectors() {
+        when(documents.findById(44L))
+                .thenReturn(Optional.of(document(DocumentStatus.FAILED, "旧失败")));
+        when(documents.markParsing(44L)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.retry(7L, 44L))
+                .isInstanceOf(ApiException.class)
+                .extracting(error -> ((ApiException) error).errorCode().code())
+                .isEqualTo("CONFLICT");
+
+        verify(vectors, never()).deleteDocument(44L);
+        verify(dispatcher, never()).submit(44L);
     }
 
     @Test

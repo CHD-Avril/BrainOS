@@ -86,15 +86,19 @@ public class DocumentIndexingService implements KnowledgeBaseCleanupPort {
         if (document.status() != DocumentStatus.FAILED) {
             throw new ApiException(ErrorCode.CONFLICT);
         }
-        vectors.deleteDocument(documentId);
         requireUpdated(documents.markParsing(documentId));
         try {
+            vectors.deleteDocument(documentId);
             dispatcher.submit(documentId);
         } catch (RuntimeException exception) {
-            documents.markFailed(documentId, "索引任务繁忙，请稍后重试");
-            throw exception;
+            markDispatchFailed(documentId);
+            throw new ApiException(ErrorCode.INTERNAL_ERROR);
         }
         return required(documentId);
+    }
+
+    void markDispatchFailed(long documentId) {
+        documents.markFailed(documentId, "索引任务繁忙，请稍后重试");
     }
 
     public void delete(long knowledgeBaseId, long documentId) {
