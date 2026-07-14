@@ -27,7 +27,7 @@ function formatDate(value: string): string {
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item @click="$emit('edit')">编辑</el-dropdown-item>
-            <el-dropdown-item divided @click="$emit('remove')">删除</el-dropdown-item>
+            <el-dropdown-item class="danger-menu-item" divided @click="$emit('remove')">删除</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -113,5 +113,9 @@ function formatDate(value: string): string {
 
 .knowledge-card :deep(.el-button--primary) {
   width: 100%;
+}
+
+:global(.danger-menu-item) {
+  color: var(--color-danger);
 }
 </style>

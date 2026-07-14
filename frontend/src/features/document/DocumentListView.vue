@@ -16,20 +16,23 @@ const loading = ref(true)
 const uploading = ref(false)
 const error = ref('')
 const fileInput = ref<HTMLInputElement>()
+const readyDocumentCount = computed(() => rows.value.filter(row => row.status === 'READY').length)
 let pollTimer: number | undefined
+let refreshRequest: Promise<void> | undefined
+let disposed = false
 
 onMounted(loadPage)
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  disposed = true
+  stopPolling()
+})
 
 async function loadPage(): Promise<void> {
   loading.value = true
   error.value = ''
   try {
-    const [summary] = await Promise.all([
-      knowledgeApi.get(knowledgeBaseId.value),
-      refresh(),
-    ])
-    knowledge.value = summary
+    const [summary] = await Promise.all([knowledgeApi.get(knowledgeBaseId.value), refresh()])
+    if (!disposed) knowledge.value = summary
   }
   catch {
     error.value = '文档列表加载失败，请重试'
@@ -40,13 +43,24 @@ async function loadPage(): Promise<void> {
 }
 
 async function refresh(): Promise<void> {
+  if (refreshRequest) return refreshRequest
   stopPolling()
-  rows.value = await documentApi.list(knowledgeBaseId.value)
-  if (rows.value.some(row => row.status === 'PARSING' || row.status === 'INDEXING')) {
-    pollTimer = window.setTimeout(() => {
-      refresh().catch(() => { error.value = '状态刷新失败，请稍后重试' })
-    }, 2000)
-  }
+  const request = documentApi.list(knowledgeBaseId.value)
+    .then((documents) => {
+      if (disposed) return
+      rows.value = documents
+      if (documents.some(row => row.status === 'PARSING' || row.status === 'INDEXING')) {
+        pollTimer = window.setTimeout(() => {
+          pollTimer = undefined
+          refresh().catch(() => { error.value = '状态刷新失败，请稍后重试' })
+        }, 2000)
+      }
+    })
+    .finally(() => {
+      if (refreshRequest === request) refreshRequest = undefined
+    })
+  refreshRequest = request
+  return request
 }
 
 function stopPolling(): void {
@@ -59,6 +73,7 @@ function selectFile(): void {
 }
 
 async function handleFile(file: File): Promise<void> {
+  if (uploading.value) return
   const extension = file.name.split('.').pop()?.toLowerCase()
   if (!extension || !['pdf', 'docx', 'txt', 'md', 'markdown'].includes(extension)) {
     ElMessage.error('仅支持 PDF、DOCX、TXT 和 Markdown 文档')
@@ -149,8 +164,8 @@ function formatTime(value: string): string {
         <p>{{ knowledge?.description || '上传企业资料，系统将自动解析并建立索引。' }}</p>
       </div>
       <div v-if="knowledge" class="document-summary">
-        <strong>{{ knowledge.readyDocumentCount }}</strong>
-        <span>/ {{ knowledge.documentCount }} 个文档可用</span>
+        <strong>{{ readyDocumentCount }}</strong>
+        <span>/ {{ rows.length }} 个文档可用</span>
       </div>
     </header>
 
@@ -185,7 +200,7 @@ function formatTime(value: string): string {
     <div class="document-table">
       <div class="document-table__heading">
         <h3>文档列表</h3>
-        <el-button :icon="RefreshRight" text @click="loadPage">刷新</el-button>
+        <el-button data-test="refresh-documents" :icon="RefreshRight" text @click="loadPage">刷新</el-button>
       </div>
       <el-table v-loading="loading" :data="rows" empty-text="暂无文档">
         <el-table-column label="文档名称" min-width="240">

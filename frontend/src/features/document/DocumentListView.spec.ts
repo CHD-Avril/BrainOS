@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import DocumentListView from './DocumentListView.vue'
-import { documentApi } from './api'
+import { documentApi, type KnowledgeDocument } from './api'
 import { knowledgeApi } from '@/features/knowledge/api'
 
 vi.mock('./api', () => ({
@@ -35,6 +35,12 @@ const processing = {
 }
 
 async function renderDocuments() {
+  const wrapper = await mountDocuments()
+  await flushPromises()
+  return wrapper
+}
+
+async function mountDocuments() {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{
@@ -48,7 +54,6 @@ async function renderDocuments() {
     attachTo: document.body,
     global: { plugins: [router, ElementPlus] },
   })
-  await flushPromises()
   return wrapper
 }
 
@@ -99,9 +104,42 @@ describe('DocumentListView', () => {
       chunkCount: 6,
     }])
 
-    await renderDocuments()
+    const wrapper = await renderDocuments()
     await vi.advanceTimersByTimeAsync(4000)
 
+    expect(documentApi.list).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toMatch(/1\s*\/\s*1 个文档可用/)
+  })
+
+  it('does not restart polling when a pending request resolves after unmount', async () => {
+    let resolveList!: (rows: KnowledgeDocument[]) => void
+    vi.mocked(documentApi.list).mockImplementation(() => new Promise((resolve) => {
+      resolveList = resolve
+    }))
+    const wrapper = await mountDocuments()
+
+    wrapper.unmount()
+    resolveList([processing])
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(4000)
+
+    expect(documentApi.list).toHaveBeenCalledTimes(1)
+  })
+
+  it('shares an in-flight refresh instead of creating overlapping poll loops', async () => {
+    let resolveList!: (rows: KnowledgeDocument[]) => void
+    vi.mocked(documentApi.list).mockImplementation(() => new Promise((resolve) => {
+      resolveList = resolve
+    }))
+    const wrapper = await mountDocuments()
+
+    await wrapper.get('[data-test="refresh-documents"]').trigger('click')
+    await wrapper.get('[data-test="refresh-documents"]').trigger('click')
+    expect(documentApi.list).toHaveBeenCalledTimes(1)
+
+    resolveList([{ ...processing, status: 'READY', chunkCount: 6 }])
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(4000)
     expect(documentApi.list).toHaveBeenCalledTimes(1)
   })
 })
