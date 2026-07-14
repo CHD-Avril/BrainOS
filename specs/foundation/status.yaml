@@ -1,8 +1,8 @@
 module: foundation
 stage: module
-status: in-dev
+status: done
 approved_by: Baron
 last_update: 2026-07-14
 depends_on:
   - overview
-notes: F-1、F-2 已通过规格与质量审查，当前进入认证与基础验收实现。
+notes: F-1、F-2、F-3 已完成并通过规格与质量审查；一键验证共 80 项检查通过且无跳过。

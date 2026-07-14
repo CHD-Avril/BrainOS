@@ -17,8 +17,8 @@ updated_at: 2026-07-14
 | 0.1 | 需求 | Codex | [done] | 2026-07-14 | — | R1-R10 |
 | 0.2 | 设计 | Codex | [done] | 2026-07-14 | 0.1 | R1-R10 |
 | 0.3 | 审阅 | Baron | [done] | 2026-07-14 | 0.2 | R1-R10 |
-| 1.0 | 工程 | Codex | [doing] | D+1 | 0.3 | R10 |
-| 2.0 | 后端/前端 | Codex | [todo] | D+2 | 1.0 | R1 |
+| 1.0 | 工程 | Codex | [done] | D+1 | 0.3 | R10 |
+| 2.0 | 后端/前端 | Codex | [doing] | D+2 | 1.0 | R1 |
 | 3.0 | 后端/前端 | Codex | [todo] | D+3 | 2.0 | R2、R3 |
 | 4.0 | 后端/前端 | Codex | [todo] | D+5 | 3.0 | R4、R5 |
 | 5.0 | 后端/前端 | Codex | [todo] | D+7 | 4.0 | R6、R7 |
@@ -43,12 +43,12 @@ updated_at: 2026-07-14
   - 用户已批准书面 Spec，`status.yaml` 已更新为 `approved`，允许创建模块 Spec 并编写实施计划。
   - _关联验收：R1-R10 全部条目_
 
-- [doing] **1.0 建立工程与验证基线**
+- [done] **1.0 建立工程与验证基线**
   - 创建 Maven 后端、Vite Vue 前端、Docker Compose、Flyway、Lombok、MapStruct、springdoc-openapi、环境变量模板和统一质量脚本。
   - 创建 `foundation` 模块 Spec，逐项执行测试先行任务。
   - _关联验收：A-R10-01、A-R10-02_
 
-- [todo] **2.0 实现认证与权限模块**
+- [doing] **2.0 实现认证与权限模块**
   - 创建 `auth` 模块 Spec；实现管理员初始化、登录、刷新、退出、当前用户和角色保护。
   - 先完成认证、刷新令牌、停用用户和越权失败测试，再实现功能。
   - _关联验收：A-R1-01 至 A-R1-04_
