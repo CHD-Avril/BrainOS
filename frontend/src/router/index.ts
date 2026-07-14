@@ -6,12 +6,14 @@ import {
   type RouterHistory,
 } from 'vue-router'
 import LoginView from '@/features/auth/LoginView.vue'
+import AuditLogView from '@/features/admin/audit/AuditLogView.vue'
+import UserAdminView from '@/features/admin/users/UserAdminView.vue'
 import ChatView from '@/features/chat/ChatView.vue'
+import DashboardView from '@/features/dashboard/DashboardView.vue'
 import { useAuthStore } from '@/features/auth/store'
 import DocumentListView from '@/features/document/DocumentListView.vue'
 import KnowledgeListView from '@/features/knowledge/KnowledgeListView.vue'
 import AppShell from '@/layouts/AppShell.vue'
-import PlaceholderView from '@/layouts/PlaceholderView.vue'
 import { pinia } from '@/pinia'
 
 declare module 'vue-router' {
@@ -35,8 +37,8 @@ export function createBrainOsRouter(history: RouterHistory, store: Pinia): Route
         children: [
           { path: '', redirect: { name: 'dashboard' } },
           {
-            path: 'dashboard', name: 'dashboard', component: PlaceholderView,
-            meta: { title: '工作台', description: '工作台功能将在后续阶段接入。' },
+            path: 'dashboard', name: 'dashboard', component: DashboardView,
+            meta: { title: '工作台' },
           },
           {
             path: 'knowledge-bases', name: 'knowledge-bases', component: KnowledgeListView,
@@ -51,12 +53,12 @@ export function createBrainOsRouter(history: RouterHistory, store: Pinia): Route
             meta: { title: 'AI 问答' },
           },
           {
-            path: 'admin/users', name: 'admin-users', component: PlaceholderView,
-            meta: { title: '用户管理', description: '用户管理功能将在后续阶段接入。', adminOnly: true },
+            path: 'admin/users', name: 'admin-users', component: UserAdminView,
+            meta: { title: '用户管理', adminOnly: true },
           },
           {
-            path: 'admin/audit-logs', name: 'audit-logs', component: PlaceholderView,
-            meta: { title: '操作日志', description: '操作日志功能将在后续阶段接入。', adminOnly: true },
+            path: 'admin/audit-logs', name: 'audit-logs', component: AuditLogView,
+            meta: { title: '操作日志', adminOnly: true },
           },
         ],
       },

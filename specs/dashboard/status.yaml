@@ -1,7 +1,7 @@
 module: dashboard
 stage: module
-status: approved
+status: done
 approved_by: Baron
-last_update: 2026-07-14
+last_update: 2026-07-15
 depends_on: [auth, knowledge, document, rag]
-notes: 模块 Spec 已批准；数据生产模块完成后实施。
+notes: 三个真实聚合 API、四指标工作台、ECharts 趋势与最近文档已完成。
