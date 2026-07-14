@@ -1,10 +1,10 @@
 module: overview
 stage: overview
-status: approved
+status: done
 version: 1.0.0
 review_requested_from: Baron
 approved_by: Baron
-updated_at: 2026-07-14
+updated_at: 2026-07-15
 completion:
   requirements: complete
   design: complete
@@ -20,5 +20,5 @@ decisions:
   alternate_chat_model: deepseek
   mobile: excluded
 notes: >-
-  需求范围、架构、页面流程、数据安全与测试方案已在对话中逐节确认，
-  用户于 2026-07-14 批准书面 overview Spec，现可创建模块 Spec、实施计划并进入开发。
+  所有模块均已实现并完成整仓验收；122 个后端单元测试、45 个后端集成测试、
+  37 个前端组件测试和 8 个双分辨率浏览器测试全部通过。
