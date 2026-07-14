@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: brainos-backend
+  profiles:
+    default: dev
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/brainos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8}
+    username: ${MYSQL_USER:brainos}
+    password: ${MYSQL_PASSWORD:brainos_dev}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+brainos:
+  chroma:
+    base-url: ${CHROMA_URL:http://localhost:8000}
+  storage:
+    root: ${BRAINOS_STORAGE_PATH:./data/uploads}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+brainos:
+  admin:
+    password: ${BRAINOS_ADMIN_PASSWORD:BrainOS@123}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!dev"
+
+brainos:
+  admin:
+    password: ${BRAINOS_ADMIN_PASSWORD}
