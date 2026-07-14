@@ -29,7 +29,7 @@ brainos:
         api-key: ${QWEN_API_KEY:}
       deepseek:
         base-url: ${DEEPSEEK_CHAT_BASE_URL:https://api.deepseek.com}
-        model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
+        model: ${DEEPSEEK_CHAT_MODEL:deepseek-v4-flash}
         api-key: ${DEEPSEEK_API_KEY:}
 
 management:

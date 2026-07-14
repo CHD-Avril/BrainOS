@@ -6,6 +6,7 @@ import {
   type RouterHistory,
 } from 'vue-router'
 import LoginView from '@/features/auth/LoginView.vue'
+import ChatView from '@/features/chat/ChatView.vue'
 import { useAuthStore } from '@/features/auth/store'
 import DocumentListView from '@/features/document/DocumentListView.vue'
 import KnowledgeListView from '@/features/knowledge/KnowledgeListView.vue'
@@ -46,8 +47,8 @@ export function createBrainOsRouter(history: RouterHistory, store: Pinia): Route
             meta: { title: '文档管理' },
           },
           {
-            path: 'chat', name: 'chat', component: PlaceholderView,
-            meta: { title: 'AI 问答', description: 'AI 问答功能将在后续阶段接入。' },
+            path: 'chat', name: 'chat', component: ChatView,
+            meta: { title: 'AI 问答' },
           },
           {
             path: 'admin/users', name: 'admin-users', component: PlaceholderView,
