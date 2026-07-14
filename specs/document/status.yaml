@@ -1,7 +1,7 @@
 module: document
 stage: module
-status: in-dev
+status: done
 approved_by: Baron
 last_update: 2026-07-15
 depends_on: [foundation, auth, knowledge]
-notes: 后端文档导入闭环和 API 已完成，正在实现知识库与文档桌面页面。
+notes: 文档上传、解析、切片、Chroma 索引、重试删除和 PC 状态页面已完成。

@@ -1,8 +1,8 @@
 module: knowledge
 stage: module
-status: in-dev
+status: done
 approved_by: Baron
-last_update: 2026-07-14
+last_update: 2026-07-15
 depends_on:
   - auth
-notes: 认证依赖已完成，开始按 Phase 2 计划实现知识库领域、API 与 PC 页面。
+notes: 知识库 CRUD、级联清理和 PC 卡片页面已完成并通过测试与桌面视觉检查。
