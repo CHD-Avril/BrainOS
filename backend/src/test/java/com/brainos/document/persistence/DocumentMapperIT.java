@@ -90,6 +90,28 @@ class DocumentMapperIT {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    @Test
+    void persistsLifecycleListsByKnowledgeBaseAndDeletes() {
+        KnowledgeDocument document = document("c".repeat(64));
+        documents.create(document);
+
+        assertThat(documents.markIndexing(document.id())).isOne();
+        assertThat(documents.markReady(document.id(), 3)).isOne();
+        assertThat(documents.findById(document.id()).orElseThrow())
+                .satisfies(view -> {
+                    assertThat(view.status()).isEqualTo(DocumentStatus.READY);
+                    assertThat(view.chunkCount()).isEqualTo(3);
+                    assertThat(view.failureReason()).isNull();
+                });
+        assertThat(documents.markFailed(document.id(), "向量模型暂时不可用")).isOne();
+        assertThat(documents.markParsing(document.id())).isOne();
+        assertThat(documents.findAllByKnowledgeBaseId(71L))
+                .extracting(DocumentView::id)
+                .containsExactly(document.id());
+        assertThat(documents.delete(document.id())).isOne();
+        assertThat(documents.findById(document.id())).isEmpty();
+    }
+
     private static KnowledgeDocument document(String sha256) {
         return new KnowledgeDocument(
                 null,

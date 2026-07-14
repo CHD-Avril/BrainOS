@@ -355,5 +355,17 @@ class DocumentUploadServiceTest {
         public Optional<DocumentView> findById(long id) {
             return rows.stream().filter(row -> row.id() == id).findFirst().map(KnowledgeDocument::toView);
         }
+
+        @Override public List<DocumentView> findAllByKnowledgeBaseId(long knowledgeBaseId) {
+            return rows.stream()
+                    .filter(row -> row.knowledgeBaseId() == knowledgeBaseId)
+                    .map(KnowledgeDocument::toView)
+                    .toList();
+        }
+        @Override public int markParsing(long id) { return 0; }
+        @Override public int markIndexing(long id) { return 0; }
+        @Override public int markReady(long id, int chunkCount) { return 0; }
+        @Override public int markFailed(long id, String failureReason) { return 0; }
+        @Override public int delete(long id) { return 0; }
     }
 }
