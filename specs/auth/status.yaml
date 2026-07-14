@@ -5,4 +5,4 @@ approved_by: Baron
 last_update: 2026-07-14
 depends_on:
   - foundation
-notes: AU-1、AU-3 已通过规格与质量审查，当前执行 AU-2 安全过滤链与认证接口。
+notes: AU-1、AU-2、AU-3 已通过规格与质量审查，当前进入 PC Web 登录与应用框架。
