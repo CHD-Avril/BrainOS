@@ -7,6 +7,8 @@ import {
 } from 'vue-router'
 import LoginView from '@/features/auth/LoginView.vue'
 import { useAuthStore } from '@/features/auth/store'
+import DocumentListView from '@/features/document/DocumentListView.vue'
+import KnowledgeListView from '@/features/knowledge/KnowledgeListView.vue'
 import AppShell from '@/layouts/AppShell.vue'
 import PlaceholderView from '@/layouts/PlaceholderView.vue'
 import { pinia } from '@/pinia'
@@ -36,8 +38,12 @@ export function createBrainOsRouter(history: RouterHistory, store: Pinia): Route
             meta: { title: '工作台', description: '工作台功能将在后续阶段接入。' },
           },
           {
-            path: 'knowledge-bases', name: 'knowledge-bases', component: PlaceholderView,
-            meta: { title: '知识库', description: '知识库管理功能将在后续阶段接入。' },
+            path: 'knowledge-bases', name: 'knowledge-bases', component: KnowledgeListView,
+            meta: { title: '知识库' },
+          },
+          {
+            path: 'knowledge-bases/:id/documents', name: 'knowledge-documents', component: DocumentListView,
+            meta: { title: '文档管理' },
           },
           {
             path: 'chat', name: 'chat', component: PlaceholderView,

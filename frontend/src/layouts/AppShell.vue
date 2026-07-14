@@ -30,6 +30,9 @@ const navigation = computed(() => (
   auth.isAdmin ? [...mainNavigation, ...adminNavigation] : mainNavigation
 ))
 const pageTitle = computed(() => String(route.meta.title ?? 'BrainOS'))
+const activeNavigation = computed(() => (
+  route.path.startsWith('/knowledge-bases') ? '/knowledge-bases' : route.path
+))
 
 async function logout(): Promise<void> {
   await auth.logout()
@@ -42,7 +45,7 @@ async function logout(): Promise<void> {
     <aside class="app-shell__sidebar">
       <div class="app-shell__brand">BrainOS</div>
       <nav aria-label="主导航">
-        <el-menu router :default-active="route.path">
+        <el-menu router :default-active="activeNavigation">
           <el-menu-item v-for="item in navigation" :key="item.path" :index="item.path">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
