@@ -11,6 +11,11 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+brainos:
+  document:
+    chunk-size: ${BRAINOS_DOCUMENT_CHUNK_SIZE:500}
+    overlap: ${BRAINOS_DOCUMENT_CHUNK_OVERLAP:80}
+
 management:
   endpoints:
     web:
