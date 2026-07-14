@@ -198,6 +198,17 @@ class AuthControllerIT {
     }
 
     @Test
+    void malformedJsonOnAuthEndpointsUsesValidationEnvelope() throws Exception {
+        String accessToken = login("task4-user", "Task4-password")
+                .path("accessToken")
+                .asText();
+
+        assertValidationFailure(postRawJson("/api/v1/auth/login", "{"));
+        assertValidationFailure(postRawJson("/api/v1/auth/refresh", "{"));
+        assertValidationFailure(postRawJson("/api/v1/auth/logout", "{", accessToken));
+    }
+
+    @Test
     void refreshRotatesTokenAndRejectsReplay() throws Exception {
         JsonNode login = login("task4-user", "Task4-password");
         String oldRefreshToken = login.path("refreshToken").asText();
@@ -362,6 +373,19 @@ class AuthControllerIT {
                 .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(body)));
+    }
+
+    private ResultActions postRawJson(String path, String body) throws Exception {
+        return mvc.perform(post(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
+    }
+
+    private ResultActions postRawJson(String path, String body, String accessToken) throws Exception {
+        return mvc.perform(post(path)
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
     }
 
     private static void assertUnauthorized(ResultActions actions) throws Exception {

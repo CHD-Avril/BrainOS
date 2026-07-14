@@ -84,3 +84,29 @@
 - Spring Boot's managed Flyway version warns that MySQL 8.4 is newer than its latest explicitly tested MySQL 8.1. All migrations and repeat validation pass against the required MySQL 8.4 image.
 - The existing Java 21 test stack emits Mockito/Byte Buddy future dynamic-agent warnings.
 - An earlier full run logged Hikari's explicit `thread starvation or clock leap` warning and reported an abnormal 1:42 h wall-clock duration. The fresh post-fix full lifecycle completed in 38.612 seconds with all `51` tests executed and no skips.
+
+## Independent Review Follow-Up
+
+### Auth exception boundary
+
+1. Added `AuthExceptionHandlerTest` and a reflection assertion proving the common advice does not register handlers for auth exceptions.
+2. RED: `./mvnw -Dtest=AuthExceptionHandlerTest,GlobalExceptionHandlerTest test` failed at test compilation because the auth-scoped advice did not yet exist. After correcting a test-only generic inference issue, the clean RED failure remained solely the missing `AuthExceptionHandler`.
+3. Moved `AuthenticationFailedException` and `InvalidRefreshTokenException` handling out of `GlobalExceptionHandler` into `AuthExceptionHandler`, scoped to the auth controller package.
+4. GREEN: the focused unit command executed `6` tests with `0` failures, `0` errors, and `0` skipped.
+5. `backend/src/main/java/com/brainos/common` no longer imports or references `com.brainos.auth`.
+
+### Malformed auth JSON
+
+1. Added integration coverage for malformed JSON sent to login, refresh, and authenticated logout. Each assertion requires the complete `ApiResponse` validation envelope.
+2. RED: `./mvnw -Dit.test=AuthControllerIT verify` executed `12` selected integration tests with `1` expected failure and `0` skipped: malformed login returned HTTP 400 with an empty body, so `$.code` was absent.
+3. Added the minimal `HttpMessageNotReadableException` mapping in `GlobalExceptionHandler`, returning HTTP 400 and `VALIDATION_ERROR`.
+4. GREEN: the focused verify executed `35` unit tests plus `12` selected integration tests, all passing with `0` skipped.
+
+### Post-review verification
+
+- Focused advice tests: `6` passed, `0` failures, `0` errors, `0` skipped.
+- Focused auth lifecycle: `35` unit + `12` selected integration tests, all passed, `0` skipped.
+- Unit: `./mvnw test` — `35` passed, `0` failures, `0` errors, `0` skipped, exit `0`.
+- Full lifecycle: `./mvnw verify` — `35` unit + `20` integration = `55` passed, `0` failures, `0` errors, `0` skipped, exit `0`.
+- Full Failsafe coverage: Redis refresh store `4`, UserMapper/wiring `2`, AuthController `12`, Flyway migration `2`.
+- No frontend, specification, plan, or unrelated Task 5 files were changed.
