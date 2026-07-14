@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 public final class RedisRefreshTokenStore implements RefreshTokenStore {
 
     private static final String KEY_PREFIX = "auth:refresh:";
+    private static final String USER_KEY_PREFIX = "auth:user-refresh:";
     private static final int TOKEN_BYTES = 32;
 
     private final StringRedisTemplate redis;
@@ -29,7 +30,10 @@ public final class RedisRefreshTokenStore implements RefreshTokenStore {
         byte[] randomBytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(randomBytes);
         String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
-        redis.opsForValue().set(keyFor(rawToken), Long.toString(userId), ttl);
+        String tokenKey = keyFor(rawToken);
+        redis.opsForValue().set(tokenKey, Long.toString(userId), ttl);
+        redis.opsForSet().add(userKey(userId), tokenKey);
+        redis.expire(userKey(userId), ttl);
         return rawToken;
     }
 
@@ -40,7 +44,9 @@ public final class RedisRefreshTokenStore implements RefreshTokenStore {
             throw new InvalidRefreshTokenException();
         }
         try {
-            return Long.parseLong(userId);
+            long parsed = Long.parseLong(userId);
+            redis.opsForSet().remove(userKey(parsed), keyFor(rawToken));
+            return parsed;
         } catch (NumberFormatException exception) {
             throw new InvalidRefreshTokenException();
         }
@@ -48,7 +54,24 @@ public final class RedisRefreshTokenStore implements RefreshTokenStore {
 
     @Override
     public void revoke(String rawToken) {
-        redis.delete(keyFor(rawToken));
+        String tokenKey = keyFor(rawToken);
+        String userId = redis.opsForValue().get(tokenKey);
+        redis.delete(tokenKey);
+        if (userId != null) {
+            try {
+                redis.opsForSet().remove(userKey(Long.parseLong(userId)), tokenKey);
+            } catch (NumberFormatException ignored) {
+                // Invalid values are deleted above and cannot be consumed again.
+            }
+        }
+    }
+
+    @Override
+    public void revokeAll(long userId) {
+        String userKey = userKey(userId);
+        var tokenKeys = redis.opsForSet().members(userKey);
+        if (tokenKeys != null && !tokenKeys.isEmpty()) redis.delete(tokenKeys);
+        redis.delete(userKey);
     }
 
     private static String keyFor(String rawToken) {
@@ -62,5 +85,10 @@ public final class RedisRefreshTokenStore implements RefreshTokenStore {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
+    }
+
+    private static String userKey(long userId) {
+        if (userId <= 0) throw new IllegalArgumentException("userId must be positive");
+        return USER_KEY_PREFIX + userId;
     }
 }

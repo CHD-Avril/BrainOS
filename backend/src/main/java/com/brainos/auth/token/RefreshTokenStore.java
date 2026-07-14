@@ -9,4 +9,8 @@ public interface RefreshTokenStore {
     long consume(String rawToken);
 
     void revoke(String rawToken);
+
+    default void revokeAll(long userId) {
+        // Stores without per-user indexing may rely on the mandatory status check during refresh.
+    }
 }

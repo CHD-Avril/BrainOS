@@ -1,5 +1,7 @@
 package com.brainos.document.application;
 
+import com.brainos.admin.audit.AuditEvent;
+import com.brainos.admin.audit.AuditRecorder;
 import com.brainos.ai.embedding.EmbeddingNotConfiguredException;
 import com.brainos.common.api.ApiException;
 import com.brainos.common.api.ErrorCode;
@@ -18,6 +20,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,6 +35,25 @@ public class DocumentIndexingService implements KnowledgeBaseCleanupPort {
     private final VectorIndexPort vectors;
     private final FileStoragePort storage;
     private final DocumentIndexingDispatcher dispatcher;
+    private final AuditRecorder audit;
+
+    @Autowired
+    public DocumentIndexingService(
+            DocumentRepository documents,
+            DocumentParserPort parser,
+            DocumentChunker chunker,
+            VectorIndexPort vectors,
+            FileStoragePort storage,
+            DocumentIndexingDispatcher dispatcher,
+            AuditRecorder audit) {
+        this.documents = documents;
+        this.parser = parser;
+        this.chunker = chunker;
+        this.vectors = vectors;
+        this.storage = storage;
+        this.dispatcher = dispatcher;
+        this.audit = audit;
+    }
 
     public DocumentIndexingService(
             DocumentRepository documents,
@@ -40,12 +62,7 @@ public class DocumentIndexingService implements KnowledgeBaseCleanupPort {
             VectorIndexPort vectors,
             FileStoragePort storage,
             DocumentIndexingDispatcher dispatcher) {
-        this.documents = documents;
-        this.parser = parser;
-        this.chunker = chunker;
-        this.vectors = vectors;
-        this.storage = storage;
-        this.dispatcher = dispatcher;
+        this(documents, parser, chunker, vectors, storage, dispatcher, event -> {});
     }
 
     public void index(long documentId) {
@@ -82,6 +99,10 @@ public class DocumentIndexingService implements KnowledgeBaseCleanupPort {
     }
 
     public DocumentView retry(long knowledgeBaseId, long documentId) {
+        return retry(knowledgeBaseId, documentId, null);
+    }
+
+    public DocumentView retry(long knowledgeBaseId, long documentId, Long actorId) {
         DocumentView document = get(knowledgeBaseId, documentId);
         if (document.status() != DocumentStatus.FAILED) {
             throw new ApiException(ErrorCode.CONFLICT);
@@ -94,6 +115,7 @@ public class DocumentIndexingService implements KnowledgeBaseCleanupPort {
             markDispatchFailed(documentId);
             throw new ApiException(ErrorCode.INTERNAL_ERROR);
         }
+        if (actorId != null) audit.record(AuditEvent.documentRetried(actorId, documentId));
         return required(documentId);
     }
 
@@ -102,10 +124,15 @@ public class DocumentIndexingService implements KnowledgeBaseCleanupPort {
     }
 
     public void delete(long knowledgeBaseId, long documentId) {
+        delete(knowledgeBaseId, documentId, null);
+    }
+
+    public void delete(long knowledgeBaseId, long documentId, Long actorId) {
         DocumentView document = get(knowledgeBaseId, documentId);
         vectors.deleteDocument(documentId);
         storage.delete(Path.of(document.storagePath()));
         requireUpdated(documents.delete(documentId));
+        if (actorId != null) audit.record(AuditEvent.documentDeleted(actorId, documentId));
     }
 
     @Override

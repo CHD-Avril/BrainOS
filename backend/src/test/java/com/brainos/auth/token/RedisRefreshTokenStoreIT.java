@@ -74,9 +74,10 @@ class RedisRefreshTokenStoreIT {
         assertThat(rawToken).doesNotContain("=");
         String expectedKey = "auth:refresh:" + sha256(rawToken);
         Set<String> keys = redis.keys("*");
-        assertThat(keys).containsExactly(expectedKey);
+        assertThat(keys).containsExactlyInAnyOrder(expectedKey, "auth:user-refresh:42");
         assertThat(expectedKey).doesNotContain(rawToken);
         assertThat(redis.opsForValue().get(expectedKey)).isEqualTo("42");
+        assertThat(redis.opsForSet().members("auth:user-refresh:42")).containsExactly(expectedKey);
         assertThat(redis.getExpire(expectedKey, TimeUnit.SECONDS))
                 .isBetween(SEVEN_DAYS.toSeconds() - 10, SEVEN_DAYS.toSeconds());
     }
@@ -140,6 +141,19 @@ class RedisRefreshTokenStoreIT {
         assertThat(redis.hasKey(key)).isFalse();
         assertThatCode(() -> store.revoke(rawToken)).doesNotThrowAnyException();
         assertInvalid(rawToken);
+    }
+
+    @Test
+    void revokeAllDeletesEveryTokenForOnlyThatUser() {
+        String first = store.issue(42L, SEVEN_DAYS);
+        String second = store.issue(42L, SEVEN_DAYS);
+        String other = store.issue(43L, SEVEN_DAYS);
+
+        store.revokeAll(42L);
+
+        assertInvalid(first);
+        assertInvalid(second);
+        assertThat(store.consume(other)).isEqualTo(43L);
     }
 
     private static void assertInvalid(String token) {

@@ -1,5 +1,7 @@
 package com.brainos.document.application;
 
+import com.brainos.admin.audit.AuditEvent;
+import com.brainos.admin.audit.AuditRecorder;
 import com.brainos.common.api.ApiException;
 import com.brainos.common.api.ErrorCode;
 import com.brainos.document.domain.DocumentRepository;
@@ -26,6 +28,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.apache.tika.Tika;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,17 +62,29 @@ public class DocumentUploadService {
     private final DocumentRepository documents;
     private final FileStoragePort storage;
     private final List<DocumentIndexingDispatcher> dispatchers;
+    private final AuditRecorder audit;
     private final Tika tika = new Tika();
+
+    @Autowired
+    public DocumentUploadService(
+            KnowledgeBaseRepository knowledgeBases,
+            DocumentRepository documents,
+            FileStoragePort storage,
+            List<DocumentIndexingDispatcher> dispatchers,
+            AuditRecorder audit) {
+        this.knowledgeBases = knowledgeBases;
+        this.documents = documents;
+        this.storage = storage;
+        this.dispatchers = List.copyOf(dispatchers);
+        this.audit = audit;
+    }
 
     public DocumentUploadService(
             KnowledgeBaseRepository knowledgeBases,
             DocumentRepository documents,
             FileStoragePort storage,
             List<DocumentIndexingDispatcher> dispatchers) {
-        this.knowledgeBases = knowledgeBases;
-        this.documents = documents;
-        this.storage = storage;
-        this.dispatchers = List.copyOf(dispatchers);
+        this(knowledgeBases, documents, storage, dispatchers, event -> {});
     }
 
     @Transactional
@@ -106,6 +121,7 @@ public class DocumentUploadService {
                 throw new ApiException(ErrorCode.CONFLICT);
             }
             dispatchers.forEach(dispatcher -> dispatcher.submit(document.id()));
+            audit.record(AuditEvent.documentUploaded(userId, document.id()));
             return documents.findById(document.id()).orElseGet(document::toView);
         } catch (RuntimeException exception) {
             storage.delete(stored.path());

@@ -48,13 +48,17 @@ public class KnowledgeBaseController {
 
     @PutMapping("/{id}")
     public ApiResponse<KnowledgeBaseView> update(
-            @PathVariable long id, @Valid @RequestBody KnowledgeBaseUpdateRequest request) {
-        return ApiResponse.success(service.update(id, request.name(), request.description()));
+            @PathVariable long id,
+            @Valid @RequestBody KnowledgeBaseUpdateRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.success(
+                service.update(id, request.name(), request.description(), principal.userId()));
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable long id) {
-        service.delete(id);
+    public ApiResponse<Void> delete(
+            @PathVariable long id, @AuthenticationPrincipal UserPrincipal principal) {
+        service.delete(id, principal.userId());
         return ApiResponse.success(null);
     }
 }

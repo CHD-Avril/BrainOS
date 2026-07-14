@@ -80,7 +80,7 @@ class DocumentControllerIT {
                 9L, "document-user", "unused", "Document User", UserRole.USER, UserStatus.ENABLED));
         when(indexing.list(7L)).thenReturn(List.of(view));
         when(indexing.get(7L, 44L)).thenReturn(view);
-        when(indexing.retry(7L, 44L)).thenReturn(view);
+        when(indexing.retry(7L, 44L, 9L)).thenReturn(view);
     }
 
     @Test
@@ -110,7 +110,7 @@ class DocumentControllerIT {
                         .header("Authorization", bearer))
                 .andExpect(status().isOk());
 
-        verify(indexing).delete(7L, 44L);
+        verify(indexing).delete(7L, 44L, 9L);
     }
 
     @Test

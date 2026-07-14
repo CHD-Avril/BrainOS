@@ -31,15 +31,15 @@ class DocumentControllerTest {
         when(uploads.upload(7L, file, 9L)).thenReturn(view);
         when(indexing.list(7L)).thenReturn(List.of(view));
         when(indexing.get(7L, 44L)).thenReturn(view);
-        when(indexing.retry(7L, 44L)).thenReturn(view);
+        when(indexing.retry(7L, 44L, 9L)).thenReturn(view);
 
         assertThat(controller.upload(7L, file, principal).data()).isEqualTo(view);
         assertThat(controller.list(7L).data()).containsExactly(view);
         assertThat(controller.get(7L, 44L).data()).isEqualTo(view);
-        assertThat(controller.retry(7L, 44L).data()).isEqualTo(view);
-        assertThat(controller.delete(7L, 44L).code()).isEqualTo("OK");
+        assertThat(controller.retry(7L, 44L, principal).data()).isEqualTo(view);
+        assertThat(controller.delete(7L, 44L, principal).code()).isEqualTo("OK");
 
-        verify(indexing).delete(7L, 44L);
+        verify(indexing).delete(7L, 44L, 9L);
     }
 
     private static DocumentView document(DocumentStatus status) {

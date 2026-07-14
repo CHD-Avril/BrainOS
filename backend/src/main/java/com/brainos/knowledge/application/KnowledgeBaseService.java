@@ -1,5 +1,7 @@
 package com.brainos.knowledge.application;
 
+import com.brainos.admin.audit.AuditEvent;
+import com.brainos.admin.audit.AuditRecorder;
 import com.brainos.common.api.ApiException;
 import com.brainos.common.api.ErrorCode;
 import com.brainos.knowledge.domain.KnowledgeBase;
@@ -7,6 +9,7 @@ import com.brainos.knowledge.domain.KnowledgeBaseRepository;
 import com.brainos.knowledge.domain.KnowledgeBaseView;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +20,21 @@ public class KnowledgeBaseService {
 
     private final KnowledgeBaseRepository knowledgeBases;
     private final List<KnowledgeBaseCleanupPort> cleanupPorts;
+    private final AuditRecorder audit;
+
+    @Autowired
+    public KnowledgeBaseService(
+            KnowledgeBaseRepository knowledgeBases,
+            List<KnowledgeBaseCleanupPort> cleanupPorts,
+            AuditRecorder audit) {
+        this.knowledgeBases = knowledgeBases;
+        this.cleanupPorts = List.copyOf(cleanupPorts);
+        this.audit = audit;
+    }
 
     public KnowledgeBaseService(
             KnowledgeBaseRepository knowledgeBases, List<KnowledgeBaseCleanupPort> cleanupPorts) {
-        this.knowledgeBases = knowledgeBases;
-        this.cleanupPorts = List.copyOf(cleanupPorts);
+        this(knowledgeBases, cleanupPorts, event -> {});
     }
 
     @Transactional
@@ -37,6 +50,7 @@ public class KnowledgeBaseService {
         } catch (DataIntegrityViolationException exception) {
             throw new ApiException(ErrorCode.CONFLICT);
         }
+        audit.record(AuditEvent.knowledgeCreated(createdBy, knowledgeBase.id()));
         return get(knowledgeBase.id());
     }
 
@@ -53,6 +67,12 @@ public class KnowledgeBaseService {
 
     @Transactional
     public KnowledgeBaseView update(long id, String rawName, String rawDescription) {
+        return update(id, rawName, rawDescription, null);
+    }
+
+    @Transactional
+    public KnowledgeBaseView update(
+            long id, String rawName, String rawDescription, Long actorId) {
         get(id);
         String name = normalizeName(rawName);
         String description = normalizeDescription(rawDescription);
@@ -66,16 +86,23 @@ public class KnowledgeBaseService {
         } catch (DataIntegrityViolationException exception) {
             throw new ApiException(ErrorCode.CONFLICT);
         }
+        if (actorId != null) audit.record(AuditEvent.knowledgeUpdated(actorId, id));
         return get(id);
     }
 
     @Transactional
     public void delete(long id) {
+        delete(id, null);
+    }
+
+    @Transactional
+    public void delete(long id, Long actorId) {
         get(id);
         cleanupPorts.forEach(port -> port.cleanup(id));
         if (knowledgeBases.delete(id) == 0) {
             throw new ApiException(ErrorCode.NOT_FOUND);
         }
+        if (actorId != null) audit.record(AuditEvent.knowledgeDeleted(actorId, id));
     }
 
     private static String normalizeName(String rawName) {

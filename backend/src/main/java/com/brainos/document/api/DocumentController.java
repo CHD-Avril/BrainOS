@@ -52,14 +52,19 @@ public class DocumentController {
 
     @PostMapping("/{documentId}/retry")
     public ApiResponse<DocumentView> retry(
-            @PathVariable long knowledgeBaseId, @PathVariable long documentId) {
-        return ApiResponse.success(indexing.retry(knowledgeBaseId, documentId));
+            @PathVariable long knowledgeBaseId,
+            @PathVariable long documentId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.success(
+                indexing.retry(knowledgeBaseId, documentId, principal.userId()));
     }
 
     @DeleteMapping("/{documentId}")
     public ApiResponse<Void> delete(
-            @PathVariable long knowledgeBaseId, @PathVariable long documentId) {
-        indexing.delete(knowledgeBaseId, documentId);
+            @PathVariable long knowledgeBaseId,
+            @PathVariable long documentId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        indexing.delete(knowledgeBaseId, documentId, principal.userId());
         return ApiResponse.success(null);
     }
 }
