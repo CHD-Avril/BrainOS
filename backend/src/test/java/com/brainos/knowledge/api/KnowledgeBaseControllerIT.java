@@ -153,16 +153,31 @@ class KnowledgeBaseControllerIT {
     void invalidCreateAndUpdateReturnValidationEnvelope() throws Exception {
         String bearer = bearer(41L, "knowledge-user", UserRole.USER);
 
+        create(bearer, "   ", null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        create(bearer, " a ", null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         create(bearer, "a", null)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
-        create(bearer, "有效名称", "x".repeat(501))
+        create(bearer, "  " + "x".repeat(61) + "  ", null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        create(bearer, "有效名称", "  " + "x".repeat(501) + "  ")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
         long id = createdId(create(bearer, "有效名称", null).andExpect(status().isOk()).andReturn());
         json(put("/api/v1/knowledge-bases/{id}", id), bearer,
-                        Map.of("name", "x".repeat(61)))
+                        Map.of("name", "  " + "x".repeat(61) + "  "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        json(put("/api/v1/knowledge-bases/{id}", id), bearer,
+                        Map.of(
+                                "name", "有效名称",
+                                "description", "  " + "x".repeat(501) + "  "))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
