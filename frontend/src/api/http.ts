@@ -6,8 +6,14 @@ const http = axios.create({
 })
 
 http.interceptors.request.use((config) => {
-  const accessToken = loadSession()?.accessToken
-  if (accessToken) config.headers.set('Authorization', `Bearer ${accessToken}`)
+  const requestUrl = new URL(http.getUri(config), window.location.origin)
+  const isApiRequest = requestUrl.origin === window.location.origin
+    && (requestUrl.pathname === '/api/v1' || requestUrl.pathname.startsWith('/api/v1/'))
+
+  if (isApiRequest) {
+    const accessToken = loadSession()?.accessToken
+    if (accessToken) config.headers.set('Authorization', `Bearer ${accessToken}`)
+  }
   return config
 })
 

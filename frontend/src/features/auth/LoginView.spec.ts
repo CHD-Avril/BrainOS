@@ -34,6 +34,17 @@ describe('LoginView', () => {
     vi.mocked(authApi.login).mockReset()
   })
 
+  it('renders only the approved core login content', async () => {
+    const { wrapper } = await renderLogin()
+
+    expect(wrapper.text()).toContain('BrainOS')
+    expect(wrapper.get('h1').text()).toBe('登录 BrainOS')
+    expect(wrapper.find('[aria-label="用户名"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="密码"]').exists()).toBe(true)
+    expect(wrapper.get('button[type="submit"]').text()).toContain('登录')
+    expect(wrapper.text()).not.toContain('使用企业账号进入知识管理工作台')
+  })
+
   it('shows inline Chinese errors for an empty form without calling the API', async () => {
     const { wrapper } = await renderLogin()
 

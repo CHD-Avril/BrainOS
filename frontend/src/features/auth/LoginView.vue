@@ -43,7 +43,6 @@ async function submit(): Promise<void> {
     <section class="login-panel" aria-labelledby="login-title">
       <div class="login-brand">BrainOS</div>
       <h1 id="login-title">登录 BrainOS</h1>
-      <p class="login-description">使用企业账号进入知识管理工作台</p>
 
       <el-alert
         v-if="authenticationError"
@@ -119,13 +118,6 @@ h1 {
   font-size: 24px;
   line-height: 32px;
   font-weight: 600;
-}
-
-.login-description {
-  margin: 8px 0 24px;
-  color: var(--color-muted);
-  font-size: 14px;
-  line-height: 22px;
 }
 
 .login-error {

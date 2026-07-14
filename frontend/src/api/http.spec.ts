@@ -27,4 +27,38 @@ describe('HTTP client', () => {
     expect(http.defaults.baseURL).toBe('/api/v1')
     expect(requestConfig?.headers.get('Authorization')).toBe('Bearer access-token')
   })
+
+  it('does not attach session authentication to a cross-origin absolute URL', async () => {
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 1, username: 'admin', displayName: '管理员', role: 'ADMIN' },
+    }))
+    let requestConfig: InternalAxiosRequestConfig | undefined
+    http.defaults.adapter = (async (config) => {
+      requestConfig = config
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+    }) as AxiosAdapter
+
+    await http.get('https://evil.example/api/v1/auth/me')
+
+    expect(requestConfig?.headers.has('Authorization')).toBe(false)
+  })
+
+  it('does not attach session authentication to a same-origin non-API URL', async () => {
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 1, username: 'admin', displayName: '管理员', role: 'ADMIN' },
+    }))
+    let requestConfig: InternalAxiosRequestConfig | undefined
+    http.defaults.adapter = (async (config) => {
+      requestConfig = config
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+    }) as AxiosAdapter
+
+    await http.get(`${window.location.origin}/health`)
+
+    expect(requestConfig?.headers.has('Authorization')).toBe(false)
+  })
 })
