@@ -1,0 +1,7 @@
+module: dashboard
+stage: module
+status: review
+approved_by: null
+last_update: 2026-07-14
+depends_on: [auth, knowledge, document, rag]
+notes: 等待模块 Spec 审阅；数据生产模块完成后实施。

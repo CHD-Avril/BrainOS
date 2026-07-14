@@ -1,0 +1,7 @@
+module: rag
+stage: module
+status: review
+approved_by: null
+last_update: 2026-07-14
+depends_on: [auth, knowledge, document]
+notes: 等待模块 Spec 审阅；批准后从 RA-1 开始。
