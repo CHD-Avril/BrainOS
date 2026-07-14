@@ -1,7 +1,10 @@
 package com.brainos.document.chunking;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.brainos.document.parsing.DocumentParsingException;
+import com.brainos.document.parsing.NoUsableTextException;
 import com.brainos.document.parsing.ParsedSection;
 import java.util.List;
 import java.util.Map;
@@ -64,5 +67,41 @@ class DocumentChunkerTest {
         assertThat(chunks).isEqualTo(chunker.chunk(
             3L, 11L, "knowledge.md", List.of(new ParsedSection(text, null), new ParsedSection("", null))
         ));
+    }
+
+    @Test
+    void preservesShortUsableTextAndRejectsDocumentsWithoutText() {
+        DocumentChunker chunker = new DocumentChunker(500, 80);
+
+        List<DocumentChunk> chunks =
+            chunker.chunk(1L, 2L, "short.txt", List.of(new ParsedSection("制度", null)));
+
+        assertThat(chunks).singleElement().satisfies(chunk -> {
+            assertThat(chunk.id()).isEqualTo("2:0");
+            assertThat(chunk.text()).isEqualTo("制度");
+        });
+        assertThatThrownBy(() -> chunker.chunk(1L, 2L, "blank.txt", List.of()))
+            .isInstanceOf(NoUsableTextException.class)
+            .hasMessage("未提取到可用文本");
+        assertThatThrownBy(() -> chunker.chunk(
+            1L,
+            2L,
+            "blank.txt",
+            List.of(new ParsedSection(" \n\t", null))
+        )).isInstanceOf(NoUsableTextException.class)
+            .hasMessage("未提取到可用文本");
+    }
+
+    @Test
+    void enforcesDocumentWideChunkLimitAcrossSections() {
+        DocumentChunker chunker = new DocumentChunker(500, 0, 1);
+        List<ParsedSection> sections = List.of(
+            new ParsedSection("First enterprise policy section.", 1),
+            new ParsedSection("Second enterprise policy section.", 2)
+        );
+
+        assertThatThrownBy(() -> chunker.chunk(1L, 2L, "policy.pdf", sections))
+            .isInstanceOf(DocumentParsingException.class)
+            .hasMessage("文档切片数量过多");
     }
 }
