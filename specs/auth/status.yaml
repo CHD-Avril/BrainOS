@@ -1,8 +1,8 @@
 module: auth
 stage: module
-status: in-dev
+status: done
 approved_by: Baron
 last_update: 2026-07-14
 depends_on:
   - foundation
-notes: AU-1、AU-2、AU-3 及 PC Web 登录流程已通过规格与质量审查；AU-4 仅剩认证审计事件。
+notes: AU-1 至 AU-4 已完成并通过规格与质量审查；后端 58 项测试全部通过且无跳过。
