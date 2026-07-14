@@ -45,8 +45,10 @@ public final class SpringAiChatModelRouter implements ChatModelRouter {
                     : route.apply(prompt);
         }
         return model(type).stream(prompt)
-                .map(response -> response.getResult().getOutput().getText())
-                .filter(text -> text != null && !text.isEmpty());
+                .handle((response, sink) -> {
+                    String text = response.getResult().getOutput().getText();
+                    if (text != null && !text.isEmpty()) sink.next(text);
+                });
     }
 
     private ChatModel model(ChatModelType type) {

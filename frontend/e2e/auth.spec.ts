@@ -41,18 +41,32 @@ test('real admin login exposes navigation and logout clears the session', async 
     .toBeNull()
 })
 
-test('ordinary user is guarded from admin routes and admin navigation', async ({ page }) => {
+test('ordinary user is guarded from admin routes and admin navigation', async ({ page, request }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
   })
-  await page.addInitScript(() => {
-    sessionStorage.setItem('brainos.auth.session', JSON.stringify({
-      accessToken: 'e2e-user-access',
-      refreshToken: 'e2e-user-refresh',
-      user: { id: 42, username: 'ordinary-user', displayName: 'Ordinary User', role: 'USER' },
-    }))
+
+  const suffix = testInfo.project.name.includes('1024') ? '1024' : '1440'
+  const username = `guard.${suffix}.${Date.now().toString(36)}`
+  const password = 'OrdinaryPass8'
+  const adminLogin = await request.post('http://127.0.0.1:8080/api/v1/auth/login', {
+    data: { username: 'admin', password: 'BrainOS@123' },
   })
+  expect(adminLogin.ok()).toBe(true)
+  const adminSession = (await adminLogin.json()).data
+  const created = await request.post('http://127.0.0.1:8080/api/v1/admin/users', {
+    headers: { Authorization: `Bearer ${adminSession.accessToken}` },
+    data: { username, displayName: '普通用户', password, role: 'USER' },
+  })
+  expect(created.ok()).toBe(true)
+
+  await page.goto('/login')
+  await page.getByLabel('用户名').fill(username)
+  await page.getByLabel('密码').fill(password)
+  await page.getByRole('button', { name: '登录' }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
+
   await page.goto('/admin/users')
   await expect(page).toHaveURL(/\/dashboard$/)
   const navigation = page.getByRole('navigation', { name: '主导航' })
@@ -60,7 +74,7 @@ test('ordinary user is guarded from admin routes and admin navigation', async ({
   await expect(page.getByRole('heading', { name: '工作台', exact: true, level: 1 })).toBeVisible()
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { name: '工作台', exact: true, level: 2 })).toBeVisible()
-  await expect(main.getByText('工作台功能将在后续阶段接入。', { exact: true })).toBeVisible()
+  await expect(main.getByText('一眼了解知识库资产与 AI 使用情况。', { exact: true })).toBeVisible()
   await expect(navigation.getByText('用户管理', { exact: true })).toHaveCount(0)
   await expect(navigation.getByText('操作日志', { exact: true })).toHaveCount(0)
   await assertResponsiveAndQuiet(page, consoleErrors)

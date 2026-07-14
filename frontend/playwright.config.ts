@@ -19,6 +19,13 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: 'node ../scripts/mock-ai-server.mjs',
+      cwd: '.',
+      url: 'http://127.0.0.1:18091/health',
+      timeout: 30_000,
+      reuseExistingServer: false,
+    },
+    {
       command: '../scripts/run-e2e-backend.sh',
       cwd: '.',
       url: 'http://127.0.0.1:8080/actuator/health',
