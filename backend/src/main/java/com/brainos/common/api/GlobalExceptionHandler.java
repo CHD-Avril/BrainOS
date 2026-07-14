@@ -1,5 +1,7 @@
 package com.brainos.common.api;
 
+import com.brainos.auth.application.AuthenticationFailedException;
+import com.brainos.auth.token.InvalidRefreshTokenException;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResponse<Void>> handleDomainException(ApiException exception) {
         return response(exception.errorCode());
+    }
+
+    @ExceptionHandler({AuthenticationFailedException.class, InvalidRefreshTokenException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationFailure(RuntimeException exception) {
+        return response(ErrorCode.UNAUTHORIZED);
     }
 
     private ResponseEntity<ApiResponse<Void>> response(ErrorCode errorCode) {

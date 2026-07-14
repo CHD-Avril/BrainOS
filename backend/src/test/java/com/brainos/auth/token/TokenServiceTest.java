@@ -16,8 +16,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -30,9 +30,12 @@ class TokenServiceTest {
         SecretKey key = new SecretKeySpec(
                 "test-only-auth-jwt-secret-at-least-32-bytes".getBytes(), "HmacSHA256");
         JwtEncoder encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
-        JwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+        JwtTimestampValidator timestampValidator = new JwtTimestampValidator();
+        timestampValidator.setClock(Clock.fixed(NOW, ZoneOffset.UTC));
+        decoder.setJwtValidator(timestampValidator);
         TokenService service = new TokenService(encoder, Clock.fixed(NOW, ZoneOffset.UTC));
         UserAccount user = new UserAccount(
                 42L,
