@@ -19,13 +19,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: './mvnw --no-transfer-progress spring-boot:run',
-      cwd: '../backend',
-      env: {
-        MYSQL_URL: 'jdbc:mysql://localhost:3306/brainos_e2e?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8',
-        MYSQL_USER: process.env.MYSQL_USER ?? 'brainos',
-        MYSQL_PASSWORD: process.env.MYSQL_PASSWORD ?? 'brainos_dev',
-      },
+      command: '../scripts/run-e2e-backend.sh',
+      cwd: '.',
       url: 'http://127.0.0.1:8080/actuator/health',
       timeout: 120_000,
       reuseExistingServer: false,

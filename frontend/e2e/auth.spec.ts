@@ -2,6 +2,9 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function assertResponsiveAndQuiet(page: Page, errors: string[]): Promise<void> {
   expect(errors, `browser console errors: ${errors.join('\n')}`).toEqual([])
+  await expect(page.locator('#app')).toBeVisible()
+  await expect(page.locator('#app')).not.toBeEmpty()
+  await expect(page.getByRole('main')).toBeVisible()
   await expect.poll(() => page.evaluate(() => (
     Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) <= window.innerWidth
   ))).toBe(true)
@@ -53,6 +56,11 @@ test('ordinary user is guarded from admin routes and admin navigation', async ({
   await page.goto('/admin/users')
   await expect(page).toHaveURL(/\/dashboard$/)
   const navigation = page.getByRole('navigation', { name: '主导航' })
+  await expect(navigation).toBeVisible()
+  await expect(page.getByRole('heading', { name: '工作台', exact: true, level: 1 })).toBeVisible()
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: '工作台', exact: true, level: 2 })).toBeVisible()
+  await expect(main.getByText('工作台功能将在后续阶段接入。', { exact: true })).toBeVisible()
   await expect(navigation.getByText('用户管理', { exact: true })).toHaveCount(0)
   await expect(navigation.getByText('操作日志', { exact: true })).toHaveCount(0)
   await assertResponsiveAndQuiet(page, consoleErrors)
