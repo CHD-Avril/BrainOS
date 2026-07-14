@@ -10,7 +10,6 @@ import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 class GlobalExceptionHandlerTest {
 
@@ -45,8 +43,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void notFoundDomainFailureUsesStableEnvelope() throws Exception {
-        mvc.perform(get("/missing"))
+    void domainFailureUsesItsErrorCode() throws Exception {
+        mvc.perform(get("/domain-failure"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("Resource not found"))
@@ -70,9 +68,9 @@ class GlobalExceptionHandlerTest {
             // The validation interceptor rejects invalid payloads before this method runs.
         }
 
-        @GetMapping("/missing")
-        void missing() {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        @GetMapping("/domain-failure")
+        void domainFailure() {
+            throw new ApiException(ErrorCode.NOT_FOUND);
         }
 
         @GetMapping("/conflict")
