@@ -1,0 +1,24 @@
+module: overview
+stage: overview
+status: review
+version: 1.0.0
+review_requested_from: Baron
+approved_by: null
+updated_at: 2026-07-14
+completion:
+  requirements: complete
+  design: complete
+  tasks: complete
+  user_written_review: pending
+decisions:
+  scope: defense-light-complete
+  architecture: modular-monolith
+  frontend: vue3-element-plus-pc-web
+  vector_store: chroma
+  embedding_model: qwen
+  default_chat_model: qwen
+  alternate_chat_model: deepseek
+  mobile: excluded
+notes: >-
+  需求范围、架构、页面流程、数据安全与测试方案已在对话中逐节确认。
+  当前等待用户对落盘后的 overview Spec 做最终书面复核；复核通过后方可创建模块 Spec 并进入开发。
