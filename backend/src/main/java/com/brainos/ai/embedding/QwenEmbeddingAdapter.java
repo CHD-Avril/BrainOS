@@ -1,17 +1,14 @@
 package com.brainos.ai.embedding;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.ai.document.MetadataMode;
-import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.openai.OpenAiEmbeddingModel;
-import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 
 public final class QwenEmbeddingAdapter implements EmbeddingPort {
 
     private final QwenEmbeddingProperties properties;
-    private volatile EmbeddingModel model;
+    private volatile OpenAiApi api;
 
     public QwenEmbeddingAdapter(QwenEmbeddingProperties properties) {
         this.properties = Objects.requireNonNull(properties, "properties must not be null");
@@ -30,30 +27,70 @@ public final class QwenEmbeddingAdapter implements EmbeddingPort {
         if (texts == null || texts.isEmpty() || texts.stream().anyMatch(text -> text == null || text.isBlank())) {
             throw new IllegalArgumentException("embedding input must contain non-blank text");
         }
-        return model().embed(List.copyOf(texts));
+        List<String> input = List.copyOf(texts);
+        OpenAiApi.EmbeddingList<OpenAiApi.Embedding> response = api()
+                .embeddings(new OpenAiApi.EmbeddingRequest<>(
+                        input, properties.model(), "float", properties.dimensions(), null))
+                .getBody();
+        return orderedVectors(response, input.size());
     }
 
-    private EmbeddingModel model() {
-        EmbeddingModel current = model;
+    private OpenAiApi api() {
+        OpenAiApi current = api;
         if (current == null) {
             synchronized (this) {
-                current = model;
+                current = api;
                 if (current == null) {
-                    OpenAiApi api = OpenAiApi.builder()
+                    current = OpenAiApi.builder()
                             .baseUrl(stripTrailingSlash(properties.baseUrl()))
                             .apiKey(properties.apiKey())
                             .embeddingsPath("/embeddings")
                             .build();
-                    OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
-                            .model(properties.model())
-                            .dimensions(properties.dimensions())
-                            .build();
-                    current = new OpenAiEmbeddingModel(api, MetadataMode.NONE, options);
-                    model = current;
+                    api = current;
                 }
             }
         }
         return current;
+    }
+
+    private static List<float[]> orderedVectors(
+            OpenAiApi.EmbeddingList<OpenAiApi.Embedding> response, int expectedSize) {
+        if (response == null || response.data() == null || response.data().size() != expectedSize) {
+            throw new IllegalStateException("embedding response count mismatch");
+        }
+        List<float[]> ordered = new ArrayList<>(expectedSize);
+        for (int index = 0; index < expectedSize; index++) {
+            ordered.add(null);
+        }
+        int dimensions = 0;
+        for (OpenAiApi.Embedding item : response.data()) {
+            if (item == null
+                    || item.index() == null
+                    || item.index() < 0
+                    || item.index() >= expectedSize
+                    || ordered.get(item.index()) != null) {
+                throw new IllegalStateException("embedding response index mismatch");
+            }
+            float[] vector = item.embedding();
+            if (vector == null || vector.length == 0) {
+                throw new IllegalStateException("embedding response is empty");
+            }
+            if (dimensions == 0) {
+                dimensions = vector.length;
+            } else if (vector.length != dimensions) {
+                throw new IllegalStateException("embedding response dimensions mismatch");
+            }
+            for (float coordinate : vector) {
+                if (!Float.isFinite(coordinate)) {
+                    throw new IllegalStateException("embedding response contains a non-finite value");
+                }
+            }
+            ordered.set(item.index(), vector.clone());
+        }
+        if (ordered.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalStateException("embedding response index mismatch");
+        }
+        return List.copyOf(ordered);
     }
 
     private static String stripTrailingSlash(String value) {

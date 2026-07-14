@@ -18,6 +18,8 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
     public static final String COLLECTION_NAME = "brainos_documents";
     private static final String TENANT_NAME = "default_tenant";
     private static final String DATABASE_NAME = "default_database";
+    private static final String DISTANCE_METADATA_KEY = "hnsw:space";
+    private static final String DISTANCE_FUNCTION = "cosine";
     private static final int MAX_TOP_K = 100;
 
     private final ChromaApi chromaApi;
@@ -127,10 +129,16 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
                         collection = chromaApi.createCollection(
                                 TENANT_NAME,
                                 DATABASE_NAME,
-                                new ChromaApi.CreateCollectionRequest(COLLECTION_NAME));
+                                new ChromaApi.CreateCollectionRequest(
+                                        COLLECTION_NAME,
+                                        Map.of(DISTANCE_METADATA_KEY, DISTANCE_FUNCTION)));
                     }
                     if (collection == null || collection.id() == null) {
                         throw new IllegalStateException("Chroma collection initialization failed");
+                    }
+                    if (collection.metadata() == null
+                            || !DISTANCE_FUNCTION.equals(collection.metadata().get(DISTANCE_METADATA_KEY))) {
+                        throw new IllegalStateException("Chroma collection distance function must be cosine");
                     }
                     current = collection.id();
                     collectionId = current;

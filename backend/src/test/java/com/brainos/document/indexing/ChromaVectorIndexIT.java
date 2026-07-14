@@ -23,7 +23,7 @@ class ChromaVectorIndexIT {
             .withExposedPorts(8000)
             .withReuse(false);
 
-    private static final AtomicLong IDS = new AtomicLong(10_000L);
+    private static final AtomicLong IDS = new AtomicLong(3_000_000_000L);
 
     private final List<Long> documentsToDelete = new ArrayList<>();
 
@@ -159,9 +159,9 @@ class ChromaVectorIndexIT {
                 return new float[] {0f, 1f, 0f};
             }
             if (text.startsWith("near")) {
-                return new float[] {0.8f, 0.2f, 0f};
+                return new float[] {8f, 2f, 0f};
             }
-            return new float[] {1f, 0f, 0f};
+            return new float[] {10f, 0f, 0f};
         }
     }
 }

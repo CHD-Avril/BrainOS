@@ -38,8 +38,8 @@ class QwenEmbeddingAdapterTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody("""
                         {"object":"list","data":[
-                          {"object":"embedding","index":0,"embedding":[1.0,0.0,0.5]},
-                          {"object":"embedding","index":1,"embedding":[0.0,1.0,0.25]}
+                          {"object":"embedding","index":1,"embedding":[0.0,1.0,0.25]},
+                          {"object":"embedding","index":0,"embedding":[1.0,0.0,0.5]}
                         ],"model":"text-embedding-v4","usage":{"prompt_tokens":2,"total_tokens":2}}
                         """));
         QwenEmbeddingAdapter adapter = new QwenEmbeddingAdapter(new QwenEmbeddingProperties(
@@ -52,6 +52,7 @@ class QwenEmbeddingAdapterTest {
 
         assertThat(vectors).hasSize(2);
         assertThat(vectors.get(0)).containsExactly(1.0f, 0.0f, 0.5f);
+        assertThat(vectors.get(1)).containsExactly(0.0f, 1.0f, 0.25f);
         RecordedRequest request = server.takeRequest(2, TimeUnit.SECONDS);
         assertThat(request).isNotNull();
         assertThat(request.getPath()).isEqualTo("/compatible-mode/v1/embeddings");
@@ -61,6 +62,24 @@ class QwenEmbeddingAdapterTest {
                 .contains("\"dimensions\":1024")
                 .contains("\"input\":[\"制度\",\"请假\"]")
                 .doesNotContain("test-secret");
+    }
+
+    @Test
+    void rejectsInvalidResponseIndexesInsteadOfMisaligningVectors() {
+        server.enqueue(new MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody("""
+                        {"object":"list","data":[
+                          {"object":"embedding","index":0,"embedding":[1.0,0.0]},
+                          {"object":"embedding","index":0,"embedding":[0.0,1.0]}
+                        ],"model":"text-embedding-v4","usage":{"prompt_tokens":2,"total_tokens":2}}
+                        """));
+        QwenEmbeddingAdapter adapter = new QwenEmbeddingAdapter(new QwenEmbeddingProperties(
+                server.url("/v1").toString(), "text-embedding-v4", 1024, "test-secret"));
+
+        assertThatThrownBy(() -> adapter.embedAll(List.of("制度", "请假")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("embedding response index mismatch");
     }
 
     @Test
