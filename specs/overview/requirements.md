@@ -2,7 +2,7 @@
 spec_id: brainos-overview
 version: 1.0.0
 stage: overview
-status: review
+status: approved
 platform: pc-web
 updated_at: 2026-07-14
 ---

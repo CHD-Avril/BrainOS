@@ -1,15 +1,15 @@
 module: overview
 stage: overview
-status: review
+status: approved
 version: 1.0.0
 review_requested_from: Baron
-approved_by: null
+approved_by: Baron
 updated_at: 2026-07-14
 completion:
   requirements: complete
   design: complete
   tasks: complete
-  user_written_review: pending
+  user_written_review: complete
 decisions:
   scope: defense-light-complete
   architecture: modular-monolith
@@ -20,5 +20,5 @@ decisions:
   alternate_chat_model: deepseek
   mobile: excluded
 notes: >-
-  需求范围、架构、页面流程、数据安全与测试方案已在对话中逐节确认。
-  当前等待用户对落盘后的 overview Spec 做最终书面复核；复核通过后方可创建模块 Spec 并进入开发。
+  需求范围、架构、页面流程、数据安全与测试方案已在对话中逐节确认，
+  用户于 2026-07-14 批准书面 overview Spec，现可创建模块 Spec、实施计划并进入开发。

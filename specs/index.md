@@ -2,7 +2,7 @@
 
 | Spec | 阶段 | 状态 | 入口 | 说明 |
 | --- | --- | --- | --- | --- |
-| 项目总览 | overview | review | [requirements](overview/requirements.md) / [design](overview/design.md) / [tasks](overview/tasks.md) / [status](overview/status.yaml) | 等待最终书面复核 |
+| 项目总览 | overview | approved | [requirements](overview/requirements.md) / [design](overview/design.md) / [tasks](overview/tasks.md) / [status](overview/status.yaml) | 2026-07-14 由 Baron 批准 |
 
 ## 计划模块
 

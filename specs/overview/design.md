@@ -2,7 +2,7 @@
 spec_id: brainos-overview-design
 version: 1.0.0
 stage: overview
-status: review
+status: approved
 depends_on: []
 deliverables:
   - code
