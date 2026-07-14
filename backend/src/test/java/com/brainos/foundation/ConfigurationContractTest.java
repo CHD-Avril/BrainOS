@@ -3,6 +3,10 @@ package com.brainos.foundation;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.brainos.BrainOsApplication;
+import com.brainos.EmptyUserRepository;
+import com.brainos.RepositoryFiles;
+import com.brainos.auth.domain.UserRepository;
+import java.nio.file.Files;
 import java.util.Arrays;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
@@ -29,12 +33,14 @@ class ConfigurationContractTest {
         "REDIS_PASSWORD=redis-secret",
         "CHROMA_URL=https://chroma.internal",
         "BRAINOS_STORAGE_PATH=/srv/brainos/uploads",
-        "BRAINOS_ADMIN_PASSWORD=ProdAdmin@456"
+        "BRAINOS_ADMIN_PASSWORD=ProdAdmin@456",
+        "BRAINOS_JWT_SECRET=prod-only-jwt-secret-with-at-least-32-bytes"
     };
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withUserConfiguration(BrainOsApplication.class)
+            .withBean(UserRepository.class, EmptyUserRepository::new)
             .withPropertyValues(AUTO_CONFIGURATION_EXCLUSIONS);
 
     @Test
@@ -57,6 +63,8 @@ class ConfigurationContractTest {
                     .isEqualTo("./data/uploads");
             assertThat(context.getEnvironment().getRequiredProperty("brainos.admin.password"))
                     .isEqualTo("BrainOS@123");
+            assertThat(context.getEnvironment().getRequiredProperty("brainos.auth.jwt.secret"))
+                    .isEqualTo("BrainOS-dev-only-jwt-secret-change-before-production");
         });
     }
 
@@ -71,7 +79,8 @@ class ConfigurationContractTest {
                 "REDIS_PASSWORD",
                 "CHROMA_URL",
                 "BRAINOS_STORAGE_PATH",
-                "BRAINOS_ADMIN_PASSWORD"
+                "BRAINOS_ADMIN_PASSWORD",
+                "BRAINOS_JWT_SECRET"
             })
     void prodProfileFailsWhenAnyRequiredEnvironmentIsMissing(String missingVariable) {
         contextRunner
@@ -79,9 +88,10 @@ class ConfigurationContractTest {
                 .withPropertyValues(environmentWithout(missingVariable))
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    if (missingVariable.equals("BRAINOS_ADMIN_PASSWORD")) {
+                    if (missingVariable.equals("BRAINOS_ADMIN_PASSWORD")
+                            || missingVariable.equals("BRAINOS_JWT_SECRET")) {
                         assertThat(rootCause(context.getStartupFailure()).getMessage())
-                                .contains("BRAINOS_ADMIN_PASSWORD");
+                                .contains(missingVariable);
                     }
                 });
     }
@@ -115,6 +125,8 @@ class ConfigurationContractTest {
                             .isEqualTo("https://chroma.internal");
                     assertThat(context.getEnvironment().getRequiredProperty("brainos.storage.root"))
                             .isEqualTo("/srv/brainos/uploads");
+                    assertThat(context.getEnvironment().getRequiredProperty("brainos.auth.jwt.secret"))
+                            .isEqualTo("prod-only-jwt-secret-with-at-least-32-bytes");
 
                     FlywayConfigurationCustomizer customizer =
                             context.getBean(FlywayConfigurationCustomizer.class);
@@ -127,6 +139,13 @@ class ConfigurationContractTest {
                     assertThat(encoder.matches("ProdAdmin@456", seededHash)).isTrue();
                     assertThat(encoder.matches("BrainOS@123", seededHash)).isFalse();
                 });
+    }
+
+    @Test
+    void environmentExampleDocumentsJwtSecretOverride() throws Exception {
+        assertThat(Files.readString(RepositoryFiles.find(".env.example")))
+                .contains("BRAINOS_JWT_SECRET=")
+                .contains("Required when running the backend with any profile other than dev");
     }
 
     private static String[] environmentWithout(String missingVariable) {

@@ -9,6 +9,7 @@ class BrainOsApplicationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withUserConfiguration(BrainOsApplication.class)
+            .withBean(com.brainos.auth.domain.UserRepository.class, EmptyUserRepository::new)
             .withPropertyValues(
                     "spring.autoconfigure.exclude="
                             + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"

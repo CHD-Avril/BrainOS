@@ -2,8 +2,8 @@ package com.brainos.foundation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.brainos.RepositoryFiles;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -14,8 +14,8 @@ class ComposeContractTest {
     @Test
     @SuppressWarnings("unchecked")
     void composePinsHealthyPersistentDataServices() throws Exception {
-        Path composePath = Path.of(System.getProperty("user.dir"), "..", "docker-compose.yml").normalize();
-        Map<String, Object> compose = new Yaml().load(Files.readString(composePath));
+        Map<String, Object> compose =
+                new Yaml().load(Files.readString(RepositoryFiles.find("docker-compose.yml")));
         Map<String, Map<String, Object>> services =
                 (Map<String, Map<String, Object>>) compose.get("services");
 
