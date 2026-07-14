@@ -1,8 +1,8 @@
 module: foundation
 stage: module
-status: approved
+status: in-dev
 approved_by: Baron
 last_update: 2026-07-14
 depends_on:
   - overview
-notes: 模块 Spec 已批准；按实施计划从 F-1 开始。
+notes: Phase 1 已开始，当前执行 F-1。
