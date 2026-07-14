@@ -94,3 +94,31 @@
 
 - Flyway logs that MySQL 8.4 is newer than its latest tested MySQL 8.1 version; the existing and new migrations still pass against the pinned project image.
 - The existing Spring test stack logs Mockito/Byte Buddy dynamic-agent deprecation warnings on Java 21; no tests are skipped or failed.
+
+## Official Review Follow-Up: BCrypt Cost Normalization
+
+### Finding
+
+The original login path delegated every stored BCrypt hash to Spring Security. Because BCrypt derives its work factor from the stored hash, legacy low-cost hashes, higher-cost hashes, malformed values, and a missing-user dummy comparison did not have a uniform cost. This created a timing distinction at the authentication boundary.
+
+### TDD Evidence
+
+- RED: `./mvnw -Dtest=AuthServiceTest test` ran 11 tests with 1 expected failure. A user holding a valid cost-4 BCrypt hash authenticated successfully, proving the review finding.
+- GREEN: the same focused command passed 11/11 tests with 0 failures, 0 errors, and 0 skipped tests.
+- The rejection matrix covers missing users, wrong passwords, disabled users, cost 4/10/13 hashes, malformed hashes, unsupported BCrypt versions, blank hashes, and null hashes.
+- The recording test double delegates to a real `BCryptPasswordEncoder(12)`, proving each rejected attempt performs exactly one legal cost-12 BCrypt comparison. Supported `$2a$`, `$2b$`, and `$2y$` cost-12 hashes remain accepted.
+
+### Fix
+
+`AuthService` now accepts only structurally valid 60-character BCrypt hashes with versions `2a`, `2b`, or `2y` and an exact cost of 12. Missing, malformed, unsupported, blank, null, and non-cost-12 stored hashes are replaced by the fixed cost-12 dummy hash for comparison and are always rejected with the same generic authentication error. Malformed values never reach the BCrypt delegate, so they cannot cause parser warnings or exceptions.
+
+### Write Boundary
+
+- `AuthTokenConfiguration` provides `BCryptPasswordEncoder(12)` for application password encoding.
+- `AdminSeedFlywayConfiguration` also uses `BCryptPasswordEncoder(12)` to supply `${adminPasswordHash}` to the V2 Flyway migration.
+- No user-creation path was added in this task; the existing production and seed write paths both produce cost-12 hashes.
+
+### Verification
+
+- `./mvnw test`: 32/32 tests passed, 0 skipped.
+- `./mvnw verify`: 32 unit tests plus 8 integration tests passed (40/40 total), 0 skipped. Redis and MySQL Testcontainers started successfully.

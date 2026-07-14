@@ -7,6 +7,7 @@ import com.brainos.auth.token.RefreshTokenStore;
 import com.brainos.auth.token.TokenService;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,8 @@ public final class AuthService {
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
     private static final String DUMMY_PASSWORD_HASH =
             "$2a$12$CTO/s0AkBHtRLsofM0C2t.tIHzItCS0m.Ak/BSehB0SZIrSinHobu";
+    private static final Pattern REQUIRED_BCRYPT_HASH =
+            Pattern.compile("^\\$2[aby]\\$12\\$[./A-Za-z0-9]{53}$");
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
@@ -35,10 +38,13 @@ public final class AuthService {
 
     public TokenPair login(String username, String password) {
         Optional<UserAccount> candidate = users.findByUsername(username);
-        String passwordHash = candidate.map(UserAccount::passwordHash).orElse(DUMMY_PASSWORD_HASH);
+        String storedHash = candidate.map(UserAccount::passwordHash).orElse(null);
+        boolean hashIsUsable =
+                storedHash != null && REQUIRED_BCRYPT_HASH.matcher(storedHash).matches();
+        String passwordHash = hashIsUsable ? storedHash : DUMMY_PASSWORD_HASH;
         boolean passwordMatches = passwordEncoder.matches(password, passwordHash);
         UserAccount user = candidate
-                .filter(found -> found.isEnabled() && passwordMatches)
+                .filter(found -> hashIsUsable && found.isEnabled() && passwordMatches)
                 .orElseThrow(AuthenticationFailedException::new);
         return issuePair(user);
     }
