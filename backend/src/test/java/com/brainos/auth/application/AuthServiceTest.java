@@ -3,6 +3,8 @@ package com.brainos.auth.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.brainos.admin.audit.AuditEvent;
+import com.brainos.admin.audit.AuditRecorder;
 import com.brainos.auth.domain.UserAccount;
 import com.brainos.auth.domain.UserRepository;
 import com.brainos.auth.domain.UserRole;
@@ -47,7 +49,8 @@ class AuthServiceTest {
     void enabledUserReceivesAccessRefreshAndPasswordFreeSummary() {
         FakeUsers users = new FakeUsers(enabledUser(42L, "baron"));
         FakeRefreshTokens refreshTokens = new FakeRefreshTokens();
-        AuthService service = service(users, refreshTokens);
+        RecordingAudit audit = new RecordingAudit();
+        AuthService service = service(users, refreshTokens, audit);
 
         TokenPair pair = service.login("baron", "secret");
 
@@ -62,19 +65,76 @@ class AuthServiceTest {
         assertThat(pair.user().getClass().getRecordComponents())
                 .extracting(component -> component.getName())
                 .doesNotContain("password", "passwordHash", "password_hash");
+        assertThat(audit.events())
+                .singleElement()
+                .satisfies(event -> {
+                    assertThat(event.userId()).isEqualTo(42L);
+                    assertThat(event.action()).isEqualTo("AUTH_LOGIN");
+                    assertThat(event.targetType()).isEqualTo("USER");
+                    assertThat(event.targetId()).isEqualTo("42");
+                    assertThat(event.result()).isEqualTo("SUCCESS");
+                    assertThat(event.summary()).isEqualTo("登录成功");
+                    assertThat(event.toString())
+                            .doesNotContain(
+                                    "baron", "secret", pair.accessToken(), pair.refreshToken());
+                });
     }
 
     @Test
-    void missingUserPasswordMismatchAndDisabledUserShareGenericFailure() {
-        AuthService missing = service(new FakeUsers(), new FakeRefreshTokens());
-        AuthService wrongPassword =
-                service(new FakeUsers(enabledUser(42L, "baron")), new FakeRefreshTokens());
-        AuthService disabled =
-                service(new FakeUsers(disabledUser(42L, "baron")), new FakeRefreshTokens());
+    void rejectedLoginsShareGenericFailureAndRecordSafeAuditEvents() {
+        RecordingAudit missingAudit = new RecordingAudit();
+        RecordingAudit wrongPasswordAudit = new RecordingAudit();
+        RecordingAudit disabledAudit = new RecordingAudit();
+        AuthService missing = service(new FakeUsers(), new FakeRefreshTokens(), missingAudit);
+        AuthService wrongPassword = service(
+                new FakeUsers(enabledUser(42L, "baron")),
+                new FakeRefreshTokens(),
+                wrongPasswordAudit);
+        AuthService disabled = service(
+                new FakeUsers(disabledUser(42L, "baron")),
+                new FakeRefreshTokens(),
+                disabledAudit);
 
         assertGenericLoginFailure(missing, "baron", "secret");
         assertGenericLoginFailure(wrongPassword, "baron", "wrong");
         assertGenericLoginFailure(disabled, "baron", "secret");
+
+        assertThat(missingAudit.events())
+                .singleElement()
+                .satisfies(event -> {
+                    assertThat(event.userId()).isNull();
+                    assertThat(event.targetId()).isNull();
+                    assertThat(event.action()).isEqualTo("AUTH_LOGIN");
+                    assertThat(event.targetType()).isEqualTo("USER");
+                    assertThat(event.result()).isEqualTo("FAILURE");
+                    assertThat(event.summary()).isEqualTo("登录失败");
+                });
+        assertThat(wrongPasswordAudit.events())
+                .containsExactly(AuditEvent.loginFailure(42L));
+        assertThat(disabledAudit.events()).containsExactly(AuditEvent.loginFailure(42L));
+        assertThat(List.of(missingAudit, wrongPasswordAudit, disabledAudit))
+                .flatExtracting(RecordingAudit::events)
+                .allSatisfy(event -> assertThat(event.toString())
+                        .doesNotContain("baron", "secret", "wrong", "password", "token"));
+    }
+
+    @Test
+    void auditStorageFailureDoesNotChangeAuthenticationSemantics() {
+        AuthService success = service(
+                new FakeUsers(enabledUser(42L, "baron")),
+                new FakeRefreshTokens(),
+                event -> {
+                    throw new IllegalStateException("storage unavailable");
+                });
+        AuthService failure = service(
+                new FakeUsers(),
+                new FakeRefreshTokens(),
+                event -> {
+                    throw new IllegalStateException("storage unavailable");
+                });
+
+        assertThat(success.login("baron", "secret").user().id()).isEqualTo(42L);
+        assertGenericLoginFailure(failure, "baron", "secret");
     }
 
     @Test
@@ -224,17 +284,30 @@ class AuthServiceTest {
     }
 
     private static AuthService service(FakeUsers users, FakeRefreshTokens refreshTokens) {
-        return service(users, refreshTokens, new BCryptPasswordEncoder(12));
+        return service(users, refreshTokens, new RecordingAudit());
+    }
+
+    private static AuthService service(
+            FakeUsers users, FakeRefreshTokens refreshTokens, AuditRecorder auditRecorder) {
+        return service(users, refreshTokens, new BCryptPasswordEncoder(12), auditRecorder);
     }
 
     private static AuthService service(
             FakeUsers users, FakeRefreshTokens refreshTokens, PasswordEncoder passwordEncoder) {
+        return service(users, refreshTokens, passwordEncoder, new RecordingAudit());
+    }
+
+    private static AuthService service(
+            FakeUsers users,
+            FakeRefreshTokens refreshTokens,
+            PasswordEncoder passwordEncoder,
+            AuditRecorder auditRecorder) {
         byte[] secret = "test-only-auth-jwt-secret-at-least-32-bytes".getBytes();
         SecretKey key = new SecretKeySpec(secret, "HmacSHA256");
         JwtEncoder jwtEncoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
         TokenService tokenService =
                 new TokenService(jwtEncoder, Clock.fixed(NOW, ZoneOffset.UTC));
-        return new AuthService(users, passwordEncoder, tokenService, refreshTokens);
+        return new AuthService(users, passwordEncoder, tokenService, refreshTokens, auditRecorder);
     }
 
     private static UserAccount enabledUser(long id, String username) {
@@ -321,6 +394,19 @@ class AuthServiceTest {
     }
 
     private record RejectedLoginAttempt(String name, FakeUsers users, String password) {}
+
+    private static final class RecordingAudit implements AuditRecorder {
+        private final List<AuditEvent> events = new java.util.ArrayList<>();
+
+        @Override
+        public void record(AuditEvent event) {
+            events.add(event);
+        }
+
+        private List<AuditEvent> events() {
+            return List.copyOf(events);
+        }
+    }
 
     private static final class RecordingPasswordEncoder implements PasswordEncoder {
         private final PasswordEncoder delegate = new BCryptPasswordEncoder(12);

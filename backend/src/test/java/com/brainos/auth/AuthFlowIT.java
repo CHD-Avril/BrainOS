@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -61,12 +63,14 @@ class AuthFlowIT {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired RedisConnectionFactory redisConnectionFactory;
+    @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
     void clearRefreshTokens() {
         try (RedisConnection connection = redisConnectionFactory.getConnection()) {
             connection.serverCommands().flushDb();
         }
+        jdbc.update("DELETE FROM audit_log");
     }
 
     @Test
@@ -104,6 +108,44 @@ class AuthFlowIT {
 
         postJson("/api/v1/auth/refresh", Map.of("refreshToken", rotatedRefresh))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void successfulAndRejectedLoginPersistCredentialFreeAuditEvents() throws Exception {
+        String password = "integration-only-admin-password";
+        JsonNode accepted = data(postJson("/api/v1/auth/login", Map.of(
+                        "username", "admin", "password", password))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        postJson("/api/v1/auth/login", Map.of("username", "admin", "password", "wrong-password"))
+                .andExpect(status().isUnauthorized());
+
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT user_id, action, target_type, target_id, result, summary
+                FROM audit_log
+                ORDER BY id
+                """);
+        org.assertj.core.api.Assertions.assertThat(rows)
+                .hasSize(2)
+                .extracting(row -> List.of(
+                        ((Number) row.get("user_id")).longValue(),
+                        row.get("action"),
+                        row.get("target_type"),
+                        row.get("target_id"),
+                        row.get("result"),
+                        row.get("summary")))
+                .containsExactly(
+                        List.of(1L, "AUTH_LOGIN", "USER", "1", "SUCCESS", "登录成功"),
+                        List.of(1L, "AUTH_LOGIN", "USER", "1", "FAILURE", "登录失败"));
+        org.assertj.core.api.Assertions.assertThat(rows.toString())
+                .doesNotContain(
+                        "admin",
+                        password,
+                        "wrong-password",
+                        accepted.path("accessToken").asText(),
+                        accepted.path("refreshToken").asText(),
+                        "secret");
     }
 
     private org.springframework.test.web.servlet.ResultActions postJson(String path, Object body)

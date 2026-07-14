@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.brainos.BrainOsApplication;
 import com.brainos.EmptyUserRepository;
 import com.brainos.RepositoryFiles;
+import com.brainos.admin.audit.AuditRecorder;
 import com.brainos.auth.domain.UserRepository;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -41,6 +42,7 @@ class ConfigurationContractTest {
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withUserConfiguration(BrainOsApplication.class)
             .withBean(UserRepository.class, EmptyUserRepository::new)
+            .withBean(AuditRecorder.class, () -> event -> {})
             .withPropertyValues(AUTO_CONFIGURATION_EXCLUSIONS);
 
     @Test

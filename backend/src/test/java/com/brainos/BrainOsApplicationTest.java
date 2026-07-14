@@ -10,6 +10,7 @@ class BrainOsApplicationTest {
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withUserConfiguration(BrainOsApplication.class)
             .withBean(com.brainos.auth.domain.UserRepository.class, EmptyUserRepository::new)
+            .withBean(com.brainos.admin.audit.AuditRecorder.class, () -> event -> {})
             .withPropertyValues(
                     "spring.autoconfigure.exclude="
                             + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
