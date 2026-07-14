@@ -54,4 +54,39 @@ class LocalFileStorageTest {
         assertThatThrownBy(() -> storage.delete(root.resolve("../outside.txt")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void storeAndDeleteRejectSymbolicLinkEscape() throws Exception {
+        Path outside = Files.createTempDirectory("brainos-storage-outside-");
+        try {
+            Files.createSymbolicLink(root.resolve("9"), outside);
+            LocalFileStorage storage = new LocalFileStorage(root);
+
+            assertThatThrownBy(() -> storage.store(
+                            9L,
+                            new ByteArrayInputStream("content".getBytes(StandardCharsets.UTF_8)),
+                            "txt",
+                            1024L))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            Path victim = Files.writeString(outside.resolve("victim.txt"), "keep");
+            assertThatThrownBy(() -> storage.delete(root.resolve("9/victim.txt")))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(victim).exists();
+            try (var paths = Files.list(root)) {
+                assertThat(paths.filter(path -> path.getFileName().toString().startsWith(".upload-")))
+                        .isEmpty();
+            }
+        } finally {
+            try (var paths = Files.walk(outside)) {
+                paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (java.io.IOException ignored) {
+                        // Test cleanup only.
+                    }
+                });
+            }
+        }
+    }
 }

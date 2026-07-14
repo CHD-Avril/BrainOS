@@ -4,8 +4,8 @@ import com.brainos.common.api.ApiException;
 import com.brainos.common.api.ErrorCode;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
@@ -37,18 +37,21 @@ public final class LocalFileStorage implements FileStoragePort {
             long knowledgeBaseId, InputStream content, String extension, long maxBytes) {
         Path temporary = null;
         try {
-            Files.createDirectories(root);
-            temporary = Files.createTempFile(root, ".upload-", ".tmp");
+            Path rootReal = ensureRoot();
+            temporary = Files.createTempFile(rootReal, ".upload-", ".tmp");
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             long size = copyWithLimit(content, temporary, digest, maxBytes);
-            Path directory = root.resolve(Long.toString(knowledgeBaseId)).normalize();
-            requireInsideRoot(directory);
+            Path directory = rootReal.resolve(Long.toString(knowledgeBaseId));
             Files.createDirectories(directory);
-            Path destination = directory.resolve(UUID.randomUUID() + "." + extension).normalize();
-            requireInsideRoot(destination);
+            Path directoryReal = directory.toRealPath();
+            requireInsideRoot(directoryReal, rootReal);
+            Path destination = directoryReal.resolve(UUID.randomUUID() + "." + extension);
             moveAtomically(temporary, destination);
             return new StoredFile(destination, size, HexFormat.of().formatHex(digest.digest()));
         } catch (ApiException exception) {
+            deleteQuietly(temporary);
+            throw exception;
+        } catch (RuntimeException exception) {
             deleteQuietly(temporary);
             throw exception;
         } catch (IOException | NoSuchAlgorithmException exception) {
@@ -62,13 +65,25 @@ public final class LocalFileStorage implements FileStoragePort {
         if (path == null) {
             return;
         }
-        Path normalized = path.toAbsolutePath().normalize();
-        requireInsideRoot(normalized);
-        if (normalized.equals(root)) {
-            throw new IllegalArgumentException("Cannot delete storage root");
-        }
         try {
-            Files.deleteIfExists(normalized);
+            Path rootReal = ensureRoot();
+            Path normalized = path.toAbsolutePath().normalize();
+            if (!normalized.startsWith(root) && !normalized.startsWith(rootReal)) {
+                throw new IllegalArgumentException("Path is outside storage root");
+            }
+            if (!Files.exists(normalized, LinkOption.NOFOLLOW_LINKS)) {
+                return;
+            }
+            if (Files.isSymbolicLink(normalized)) {
+                throw new IllegalArgumentException("Symbolic links cannot be deleted as documents");
+            }
+            Path parentReal = normalized.getParent().toRealPath();
+            requireInsideRoot(parentReal, rootReal);
+            Path target = parentReal.resolve(normalized.getFileName());
+            if (target.equals(rootReal)) {
+                throw new IllegalArgumentException("Cannot delete storage root");
+            }
+            Files.deleteIfExists(target);
         } catch (IOException exception) {
             throw new IllegalStateException("文档删除失败", exception);
         }
@@ -96,18 +111,19 @@ public final class LocalFileStorage implements FileStoragePort {
         return size;
     }
 
-    private void requireInsideRoot(Path path) {
-        if (!path.startsWith(root)) {
+    private Path ensureRoot() throws IOException {
+        Files.createDirectories(root);
+        return root.toRealPath();
+    }
+
+    private static void requireInsideRoot(Path path, Path rootReal) {
+        if (!path.startsWith(rootReal)) {
             throw new IllegalArgumentException("Path is outside storage root");
         }
     }
 
     private static void moveAtomically(Path source, Path destination) throws IOException {
-        try {
-            Files.move(source, destination, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException exception) {
-            Files.move(source, destination);
-        }
+        Files.move(source, destination, StandardCopyOption.ATOMIC_MOVE);
     }
 
     private static void deleteQuietly(Path path) {

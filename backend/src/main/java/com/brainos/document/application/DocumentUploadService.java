@@ -15,16 +15,24 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.Normalizer;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.apache.tika.Tika;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 @Service
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -34,6 +42,18 @@ public class DocumentUploadService {
     private static final Set<String> EXTENSIONS = Set.of("pdf", "docx", "txt", "md", "markdown");
     private static final String DOCX_MIME =
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    private static final String CONTENT_TYPES_NAMESPACE =
+            "http://schemas.openxmlformats.org/package/2006/content-types";
+    private static final String RELATIONSHIPS_NAMESPACE =
+            "http://schemas.openxmlformats.org/package/2006/relationships";
+    private static final String WORD_NAMESPACE =
+            "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    private static final String MAIN_DOCUMENT_CONTENT_TYPE =
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
+    private static final long MAX_DOCX_UNCOMPRESSED_BYTES = 100L * 1024L * 1024L;
+    private static final long MAX_DOCX_ENTRY_BYTES = 25L * 1024L * 1024L;
+    private static final double MAX_DOCX_COMPRESSION_RATIO = 100.0;
+    private static final int MAX_DOCX_ENTRIES = 2048;
 
     private final KnowledgeBaseRepository knowledgeBases;
     private final DocumentRepository documents;
@@ -107,7 +127,7 @@ public class DocumentUploadService {
                 || originalName.contains("/")
                 || originalName.contains("\\")
                 || originalName.contains("..")
-                || originalName.chars().anyMatch(character -> character == 0 || character < 32)) {
+                || originalName.chars().anyMatch(Character::isISOControl)) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR);
         }
         int dot = originalName.lastIndexOf('.');
@@ -123,9 +143,9 @@ public class DocumentUploadService {
 
     private String validateContent(StoredFile stored, String extension) {
         try {
-            String detected = tika.detect(stored.path());
             return switch (extension) {
                 case "pdf" -> {
+                    String detected = tika.detect(stored.path());
                     byte[] header = new byte[5];
                     try (var input = Files.newInputStream(stored.path())) {
                         if (input.read(header) != header.length
@@ -155,13 +175,136 @@ public class DocumentUploadService {
         }
     }
 
-    private static void validateDocx(StoredFile stored) throws IOException {
+    private void validateDocx(StoredFile stored) throws IOException {
         try (ZipFile zip = new ZipFile(stored.path().toFile())) {
-            if (zip.getEntry("[Content_Types].xml") == null
-                    || zip.getEntry("word/document.xml") == null) {
+            validateZipSafety(zip);
+            ZipEntry contentTypes = zip.getEntry("[Content_Types].xml");
+            ZipEntry relationships = zip.getEntry("_rels/.rels");
+            ZipEntry document = zip.getEntry("word/document.xml");
+            if (contentTypes == null || relationships == null || document == null) {
+                throw new ApiException(ErrorCode.VALIDATION_ERROR);
+            }
+            if (!DOCX_MIME.equals(tika.detect(stored.path()))) {
+                throw new ApiException(ErrorCode.VALIDATION_ERROR);
+            }
+            validateContentTypes(parseXml(zip, contentTypes));
+            validateRelationships(parseXml(zip, relationships));
+            Element documentRoot = parseXml(zip, document).getDocumentElement();
+            if (!WORD_NAMESPACE.equals(documentRoot.getNamespaceURI())
+                    || !"document".equals(documentRoot.getLocalName())) {
                 throw new ApiException(ErrorCode.VALIDATION_ERROR);
             }
         }
+    }
+
+    private static void validateZipSafety(ZipFile zip) throws IOException {
+        int entryCount = 0;
+        long totalUncompressed = 0;
+        Set<String> names = new HashSet<>();
+        var entries = zip.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            entryCount++;
+            if (entryCount > MAX_DOCX_ENTRIES || !names.add(entry.getName())) {
+                throw new ApiException(ErrorCode.VALIDATION_ERROR);
+            }
+            validateZipEntryName(entry.getName());
+            if (entry.isDirectory()) {
+                continue;
+            }
+            long declaredSize = entry.getSize();
+            long compressedSize = entry.getCompressedSize();
+            if (declaredSize > MAX_DOCX_ENTRY_BYTES
+                    || (declaredSize > 0
+                            && compressedSize > 0
+                            && (double) declaredSize / compressedSize > MAX_DOCX_COMPRESSION_RATIO)) {
+                throw new ApiException(ErrorCode.VALIDATION_ERROR);
+            }
+            long actualSize = 0;
+            try (var input = zip.getInputStream(entry)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    actualSize += read;
+                    totalUncompressed += read;
+                    if (actualSize > MAX_DOCX_ENTRY_BYTES
+                            || totalUncompressed > MAX_DOCX_UNCOMPRESSED_BYTES) {
+                        throw new ApiException(ErrorCode.VALIDATION_ERROR);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void validateZipEntryName(String name) {
+        if (name.isBlank()
+                || name.startsWith("/")
+                || name.startsWith("\\")
+                || name.contains("\\")
+                || name.matches("^[A-Za-z]:.*")) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+        for (String segment : name.split("/")) {
+            if (segment.equals("..")) {
+                throw new ApiException(ErrorCode.VALIDATION_ERROR);
+            }
+        }
+    }
+
+    private static org.w3c.dom.Document parseXml(ZipFile zip, ZipEntry entry) throws IOException {
+        try (var input = zip.getInputStream(entry)) {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            return factory.newDocumentBuilder().parse(input);
+        } catch (ParserConfigurationException | SAXException exception) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+    }
+
+    private static void validateContentTypes(org.w3c.dom.Document xml) {
+        Element root = xml.getDocumentElement();
+        if (!CONTENT_TYPES_NAMESPACE.equals(root.getNamespaceURI())
+                || !"Types".equals(root.getLocalName())) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+        NodeList overrides = root.getElementsByTagNameNS(CONTENT_TYPES_NAMESPACE, "Override");
+        for (int index = 0; index < overrides.getLength(); index++) {
+            Element override = (Element) overrides.item(index);
+            if ("/word/document.xml".equals(override.getAttribute("PartName"))
+                    && MAIN_DOCUMENT_CONTENT_TYPE.equals(override.getAttribute("ContentType"))) {
+                return;
+            }
+        }
+        throw new ApiException(ErrorCode.VALIDATION_ERROR);
+    }
+
+    private static void validateRelationships(org.w3c.dom.Document xml) {
+        Element root = xml.getDocumentElement();
+        if (!RELATIONSHIPS_NAMESPACE.equals(root.getNamespaceURI())
+                || !"Relationships".equals(root.getLocalName())) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+        NodeList relationships =
+                root.getElementsByTagNameNS(RELATIONSHIPS_NAMESPACE, "Relationship");
+        for (int index = 0; index < relationships.getLength(); index++) {
+            Element relationship = (Element) relationships.item(index);
+            String type = relationship.getAttribute("Type");
+            String target = relationship.getAttribute("Target");
+            String targetMode = relationship.getAttribute("TargetMode");
+            if (type.endsWith("/officeDocument")
+                    && "word/document.xml".equals(target)
+                    && !"External".equalsIgnoreCase(targetMode)) {
+                return;
+            }
+        }
+        throw new ApiException(ErrorCode.VALIDATION_ERROR);
     }
 
     private static void validateUtf8Text(StoredFile stored) throws IOException {

@@ -97,6 +97,27 @@ class DocumentUploadServiceTest {
     }
 
     @Test
+    void rejectsFakeUnsafeAndBombDocxPackages() throws IOException {
+        DocumentUploadService service = service(new FakeDocuments());
+        String mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+        assertValidation(() -> service.upload(
+                1L, new MockMultipartFile("file", "fake.docx", mime, malformedDocx()), 7L));
+        assertValidation(() -> service.upload(
+                1L,
+                new MockMultipartFile(
+                        "file", "unsafe.docx", mime, docxWith("../escape.txt", "escape".getBytes())),
+                7L));
+        assertValidation(() -> service.upload(
+                1L,
+                new MockMultipartFile(
+                        "file", "bomb.docx", mime, docxWith("word/bomb.bin", new byte[1024 * 1024])),
+                7L));
+
+        assertThat(regularFiles()).isEmpty();
+    }
+
+    @Test
     void acceptsStandardMimeParameters() {
         DocumentUploadService service = service(new FakeDocuments());
 
@@ -212,17 +233,67 @@ class DocumentUploadServiceTest {
     }
 
     private static byte[] docx() throws IOException {
+        return docxWith(null, null);
+    }
+
+    private static byte[] malformedDocx() {
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            try (ZipOutputStream zip = new ZipOutputStream(bytes)) {
+                addZipEntry(zip, "[Content_Types].xml", "<Types/>".getBytes(StandardCharsets.UTF_8));
+                addZipEntry(zip, "word/document.xml", "<document/>".getBytes(StandardCharsets.UTF_8));
+            }
+            return bytes.toByteArray();
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    private static byte[] docxWith(String extraName, byte[] extraContent) {
+        String contentTypes = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels"
+                    ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml"
+                    ContentType=
+                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """;
+        String relationships = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1"
+                    Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+                    Target="word/document.xml"/>
+                </Relationships>
+                """;
+        String document = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body><w:p><w:r><w:t>企业制度</w:t></w:r></w:p></w:body>
+                </w:document>
+                """;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(bytes)) {
-            zip.putNextEntry(new ZipEntry("[Content_Types].xml"));
-            zip.write("<Types/>".getBytes(StandardCharsets.UTF_8));
-            zip.closeEntry();
-            zip.putNextEntry(new ZipEntry("word/document.xml"));
-            zip.write("<w:document xmlns:w=\"urn:test\"><w:body/></w:document>"
-                    .getBytes(StandardCharsets.UTF_8));
-            zip.closeEntry();
+            addZipEntry(zip, "[Content_Types].xml", contentTypes.getBytes(StandardCharsets.UTF_8));
+            addZipEntry(zip, "_rels/.rels", relationships.getBytes(StandardCharsets.UTF_8));
+            addZipEntry(zip, "word/document.xml", document.getBytes(StandardCharsets.UTF_8));
+            if (extraName != null) {
+                addZipEntry(zip, extraName, extraContent);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
         }
         return bytes.toByteArray();
+    }
+
+    private static void addZipEntry(ZipOutputStream zip, String name, byte[] content)
+            throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content);
+        zip.closeEntry();
     }
 
     private static final class SizedMultipartFile extends MockMultipartFile {
