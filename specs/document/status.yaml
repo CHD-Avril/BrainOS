@@ -2,6 +2,6 @@ module: document
 stage: module
 status: in-dev
 approved_by: Baron
-last_update: 2026-07-14
+last_update: 2026-07-15
 depends_on: [foundation, auth, knowledge]
-notes: 文档校验、SHA-256 去重与安全本地存储已完成，继续实现解析、切片与状态机。
+notes: 上传、解析、切片、千问 Embedding 与 Chroma cosine 索引已完成，正在实现异步状态机与清理重试。
