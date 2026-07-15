@@ -19,14 +19,15 @@ class ComposeContractTest {
         Map<String, Map<String, Object>> services =
                 (Map<String, Map<String, Object>>) compose.get("services");
 
-        assertThat(services).containsOnlyKeys("mysql", "redis", "chroma");
+        assertThat(services).containsOnlyKeys("mysql", "redis", "chroma", "nginx");
         assertThat(services.get("mysql")).containsEntry("image", "mysql:8.4");
         assertThat(services.get("redis")).containsEntry("image", "redis:7.4-alpine");
         assertThat(services.get("chroma"))
                 .containsEntry("image", "ghcr.io/chroma-core/chroma:1.0.0");
 
-        assertThat(services.values())
-                .allSatisfy(service -> assertThat(service).containsKey("healthcheck"));
+        assertThat(List.of("mysql", "redis", "chroma"))
+                .allSatisfy(name -> assertThat(services.get(name)).containsKey("healthcheck"));
+        assertThat((List<String>) services.get("nginx").get("profiles")).containsExactly("web");
         Map<String, Object> chromaHealth =
                 (Map<String, Object>) services.get("chroma").get("healthcheck");
         assertThat(String.join(" ", (List<String>) chromaHealth.get("test")))
