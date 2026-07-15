@@ -17,6 +17,8 @@ public class RagPlanningService {
 
     public static final String NO_RELIABLE_EVIDENCE = "当前知识库中未找到可靠依据";
     private static final int TOP_K = 5;
+    private static final double CANDIDATE_THRESHOLD = 0.25d;
+    private static final int MIN_EXACT_PHRASE_LENGTH = 4;
 
     private final RagRetriever retriever;
     private final double threshold;
@@ -34,17 +36,23 @@ public class RagPlanningService {
 
     public RagAnswerPlan plan(long knowledgeBaseId, String rawQuestion) {
         String question = normalizeQuestion(rawQuestion);
+        double candidateThreshold = Math.min(threshold, CANDIDATE_THRESHOLD);
         List<CitationCandidate> citations = retriever.retrieve(
-                knowledgeBaseId, question, TOP_K, threshold);
+                knowledgeBaseId, question, TOP_K, candidateThreshold);
         if (citations.isEmpty()) {
             return RagAnswerPlan.fallback(NO_RELIABLE_EVIDENCE);
         }
         if (citations.stream().anyMatch(candidate -> candidate.knowledgeBaseId() != knowledgeBaseId)) {
             throw new IllegalStateException("检索结果知识库不一致");
         }
-        return RagAnswerPlan.grounded(citations.stream()
+        List<CitationCandidate> reliable = citations.stream()
+                .filter(candidate -> candidate.score() >= threshold
+                        || hasExactPhrase(question, candidate.snippet()))
                 .sorted(Comparator.comparingDouble(CitationCandidate::score).reversed())
-                .toList());
+                .toList();
+        return reliable.isEmpty()
+                ? RagAnswerPlan.fallback(NO_RELIABLE_EVIDENCE)
+                : RagAnswerPlan.grounded(reliable);
     }
 
     private static String normalizeQuestion(String rawQuestion) {
@@ -56,5 +64,45 @@ public class RagPlanningService {
             throw new ApiException(ErrorCode.VALIDATION_ERROR);
         }
         return question;
+    }
+
+    private static boolean hasExactPhrase(String question, String snippet) {
+        String normalizedQuestion = compact(question);
+        String normalizedSnippet = compact(snippet);
+        if (normalizedQuestion.length() < MIN_EXACT_PHRASE_LENGTH
+                || normalizedSnippet.length() < MIN_EXACT_PHRASE_LENGTH) {
+            return false;
+        }
+        int[] previous = new int[normalizedSnippet.length() + 1];
+        int[] current = new int[normalizedSnippet.length() + 1];
+        for (int questionIndex = 1; questionIndex <= normalizedQuestion.length(); questionIndex++) {
+            for (int snippetIndex = 1; snippetIndex <= normalizedSnippet.length(); snippetIndex++) {
+                if (normalizedQuestion.charAt(questionIndex - 1)
+                        == normalizedSnippet.charAt(snippetIndex - 1)) {
+                    current[snippetIndex] = previous[snippetIndex - 1] + 1;
+                    if (current[snippetIndex] >= MIN_EXACT_PHRASE_LENGTH) {
+                        return true;
+                    }
+                } else {
+                    current[snippetIndex] = 0;
+                }
+            }
+            int[] swap = previous;
+            previous = current;
+            current = swap;
+        }
+        return false;
+    }
+
+    private static String compact(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        StringBuilder normalized = new StringBuilder(value.length());
+        value.codePoints()
+                .filter(Character::isLetterOrDigit)
+                .map(Character::toLowerCase)
+                .forEach(normalized::appendCodePoint);
+        return normalized.toString();
     }
 }
