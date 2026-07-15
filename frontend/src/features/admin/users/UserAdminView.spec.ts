@@ -2,6 +2,7 @@ import ElementPlus from 'element-plus'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import UserAdminView from './UserAdminView.vue'
+import userAdminViewSource from './UserAdminView.vue?raw'
 import { userAdminApi } from './api'
 
 vi.mock('./api', () => ({
@@ -30,6 +31,14 @@ describe('UserAdminView', () => {
       page: 1,
       size: 10,
     })
+  })
+
+  it('uses one explicit alignment rule for every non-user table column', () => {
+    const centeredColumns = userAdminViewSource.match(/<el-table-column[^>]*align="center"[^>]*>/g) ?? []
+
+    expect(centeredColumns).toHaveLength(5)
+    expect(userAdminViewSource).toContain('class="time-cell"')
+    expect(userAdminViewSource).toContain('class="user-actions"')
   })
 
   it('shows user status and opens the create form', async () => {

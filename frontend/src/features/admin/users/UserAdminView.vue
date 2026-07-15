@@ -175,36 +175,38 @@ function formatTime(value: string | null): string {
           <template #default="{ row }">
             <div class="user-cell">
               <span class="user-avatar">{{ row.displayName.slice(0, 1).toUpperCase() }}</span>
-              <div><strong>{{ row.displayName }}</strong><span>@{{ row.username }}</span></div>
+              <div class="user-cell__identity"><strong>{{ row.displayName }}</strong><span>@{{ row.username }}</span></div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="角色" width="92">
+        <el-table-column label="角色" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.role === 'ADMIN' ? 'primary' : 'info'" effect="light">
               {{ row.role === 'ADMIN' ? '管理员' : '普通用户' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="86">
+        <el-table-column label="状态" width="96" align="center">
           <template #default="{ row }">
             <span class="status-dot" :class="{ 'is-disabled': row.status === 'DISABLED' }">
               {{ row.status === 'ENABLED' ? '已启用' : '已停用' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="最近登录" min-width="140">
-          <template #default="{ row }">{{ formatTime(row.lastLoginAt) }}</template>
+        <el-table-column label="最近登录" min-width="160" align="center">
+          <template #default="{ row }"><span class="time-cell">{{ formatTime(row.lastLoginAt) }}</span></template>
         </el-table-column>
-        <el-table-column label="创建时间" min-width="140">
-          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        <el-table-column label="创建时间" min-width="160" align="center">
+          <template #default="{ row }"><span class="time-cell">{{ formatTime(row.createdAt) }}</span></template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="130" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" text @click="openEdit(row)">编辑</el-button>
-            <el-button :type="row.status === 'ENABLED' ? 'danger' : 'success'" text @click="toggleStatus(row)">
-              {{ row.status === 'ENABLED' ? '停用' : '启用' }}
-            </el-button>
+            <div class="user-actions">
+              <el-button type="primary" text @click="openEdit(row)">编辑</el-button>
+              <el-button :type="row.status === 'ENABLED' ? 'danger' : 'success'" text @click="toggleStatus(row)">
+                {{ row.status === 'ENABLED' ? '停用' : '启用' }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -298,12 +300,19 @@ function formatTime(value: string | null): string {
   font-weight: 650;
 }
 
-.user-cell strong,
-.user-cell span { display: block; }
+.user-cell__identity strong,
+.user-cell__identity span { display: block; }
 .user-cell strong { color: var(--color-heading); font-weight: 550; }
 .user-cell div span { color: var(--color-muted); font-size: 12px; }
 
-.status-dot { color: var(--color-success); font-size: 13px; }
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-success);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
 .status-dot::before {
   width: 7px;
   height: 7px;
@@ -314,6 +323,24 @@ function formatTime(value: string | null): string {
   content: '';
 }
 .status-dot.is-disabled { color: var(--color-muted); }
+
+.time-cell {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.user-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+}
+
+.user-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .pagination-row {
   display: flex;

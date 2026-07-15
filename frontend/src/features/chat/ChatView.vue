@@ -491,8 +491,8 @@ function knowledgeName(id: number): string {
 }
 
 .chat-workspace {
-  height: calc(100vh - var(--topbar-height) - 128px);
-  min-height: 580px;
+  height: calc(100dvh - var(--topbar-height) - 128px);
+  min-height: 0;
   display: grid;
   grid-template-columns: 260px minmax(420px, 1fr);
   overflow: hidden;
@@ -503,6 +503,8 @@ function knowledgeName(id: number): string {
 
 .session-panel {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: #fbfdff;
   border-right: 1px solid var(--color-border);
 }
@@ -644,13 +646,18 @@ function knowledgeName(id: number): string {
 
 .conversation-panel {
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
   background: var(--color-surface);
 }
 
 .message-viewport {
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: 28px 32px;
 }
 
@@ -842,7 +849,10 @@ function knowledgeName(id: number): string {
 }
 
 .composer {
+  position: relative;
+  z-index: 1;
   padding: 14px 18px 16px;
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
 }
 
@@ -882,8 +892,8 @@ function knowledgeName(id: number): string {
   }
 
   .chat-workspace {
-    height: calc(100vh - var(--topbar-height) - 190px);
-    min-height: 520px;
+    height: calc(100dvh - var(--topbar-height) - 190px);
+    min-height: 0;
     grid-template-columns: 260px minmax(420px, 1fr);
   }
 }
