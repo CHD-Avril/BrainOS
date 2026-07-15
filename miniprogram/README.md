@@ -34,7 +34,7 @@ Copy-Item .env.development.example .env.development.local
 
 将 `VITE_API_BASE_URL` 改为后端公网 HTTPS 域名，例如 `https://api.example.com`。客户端会统一补全 `/api/v1`，不要提交真实域名、令牌或证书。
 
-仓库中的 `manifest.json` 不包含真实 AppID。仅在微信开发者工具或被忽略的本地开发配置中设置 AppID，禁止提交 AppSecret。
+仓库中的 `manifest.json` 不包含真实 AppID。仅在微信开发者工具或被忽略的本地开发配置中设置 AppID，禁止提交小程序密钥。
 
 ## 导入微信开发者工具
 
