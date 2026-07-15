@@ -56,9 +56,11 @@ public final class SpringAiChatModelRouter implements ChatModelRouter {
     }
 
     private ChatModel createModel(ChatModelType type) {
-        AiChatProperties.Provider provider = type == ChatModelType.QWEN
-                ? properties.qwen()
-                : properties.deepseek();
+        AiChatProperties.Provider provider = switch (type) {
+            case QWEN -> properties.qwen();
+            case DEEPSEEK -> properties.deepseek();
+            case CHATGPT -> properties.chatgpt();
+        };
         if (provider == null || provider.apiKey() == null || provider.apiKey().isBlank()) {
             throw new ChatModelNotConfiguredException(type);
         }

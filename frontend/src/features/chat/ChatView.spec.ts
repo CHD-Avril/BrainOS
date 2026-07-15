@@ -1,4 +1,4 @@
-import ElementPlus from 'element-plus'
+import ElementPlus, { ElSelect } from 'element-plus'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatView from './ChatView.vue'
@@ -106,6 +106,31 @@ describe('ChatView', () => {
 
     expect(chatApi.create).toHaveBeenCalledWith(7, 'QWEN')
     expect(chatApi.stream).toHaveBeenCalledWith(11, '试用期规定是什么？', expect.any(Function), expect.any(AbortSignal))
+  })
+
+  it('creates a ChatGPT session when the user selects ChatGPT', async () => {
+    const chatGptSession = { ...session, id: 12, chatModel: 'CHATGPT' as const }
+    vi.mocked(chatApi.list)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([chatGptSession])
+    vi.mocked(chatApi.create).mockResolvedValue(chatGptSession)
+    vi.mocked(chatApi.stream).mockResolvedValue()
+    const wrapper = mount(ChatView, {
+      attachTo: document.body,
+      global: { plugins: [ElementPlus] },
+    })
+    await flushPromises()
+
+    const selects = wrapper.findAllComponents(ElSelect)
+    expect(selects).toHaveLength(2)
+    selects[1]!.vm.$emit('update:modelValue', 'CHATGPT')
+    await flushPromises()
+    await wrapper.get('[data-test="chat-input"]').setValue('年假怎么申请？')
+    await wrapper.get('[data-test="send-question"]').trigger('click')
+    await flushPromises()
+
+    expect(chatApi.create).toHaveBeenCalledWith(7, 'CHATGPT')
+    expect(chatApi.stream).toHaveBeenCalledWith(12, '年假怎么申请？', expect.any(Function), expect.any(AbortSignal))
   })
 
   it('stops an active stream and lets the user retry the preserved question', async () => {

@@ -5,7 +5,7 @@ interface ApiResponse<T> {
   data: T
 }
 
-export type ChatModel = 'QWEN' | 'DEEPSEEK'
+export type ChatModel = 'QWEN' | 'DEEPSEEK' | 'CHATGPT'
 
 export interface CitationCandidate {
   knowledgeBaseId: number

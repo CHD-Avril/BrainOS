@@ -6,7 +6,7 @@
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填写 QWEN_API_KEY，可选 DEEPSEEK_API_KEY
+# 编辑 .env，填写 QWEN_API_KEY，可选 DEEPSEEK_API_KEY、OPENAI_API_KEY
 docker compose up -d --wait mysql redis chroma
 ```
 
@@ -45,6 +45,7 @@ curl http://localhost:8000/api/v2/heartbeat
 | `BRAINOS_ADMIN_PASSWORD` | 是 | 初始管理员强密码 |
 | `QWEN_API_KEY` | 是 | Embedding 与默认千问 Chat |
 | `DEEPSEEK_API_KEY` | 否 | DeepSeek Chat |
+| `OPENAI_API_KEY` | 否 | ChatGPT（OpenAI Chat Completions） |
 
 生产必须关闭开发默认值，通过密钥管理服务注入凭据，并为 MySQL、Chroma 和文档目录挂载持久化卷。
 

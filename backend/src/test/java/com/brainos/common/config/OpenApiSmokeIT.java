@@ -62,6 +62,7 @@ class OpenApiSmokeIT {
                 .contains("/api/v1/admin/audit-logs")
                 .doesNotContain("QWEN_API_KEY")
                 .doesNotContain("DEEPSEEK_API_KEY")
+                .doesNotContain("OPENAI_API_KEY")
                 .doesNotContain("BRAINOS_JWT_SECRET")
                 .doesNotContain("BrainOS@123");
     }

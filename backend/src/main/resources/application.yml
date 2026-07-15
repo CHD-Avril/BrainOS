@@ -31,6 +31,10 @@ brainos:
         base-url: ${DEEPSEEK_CHAT_BASE_URL:https://api.deepseek.com}
         model: ${DEEPSEEK_CHAT_MODEL:deepseek-v4-flash}
         api-key: ${DEEPSEEK_API_KEY:}
+      chatgpt:
+        base-url: ${OPENAI_CHAT_BASE_URL:https://api.openai.com/v1}
+        model: ${OPENAI_CHAT_MODEL:gpt-4.1-mini}
+        api-key: ${OPENAI_API_KEY:}
 
 management:
   endpoints:

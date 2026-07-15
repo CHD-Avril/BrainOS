@@ -76,6 +76,12 @@ class ConfigurationContractTest {
                     .isEqualTo("BrainOS@123");
             assertThat(context.getEnvironment().getRequiredProperty("brainos.auth.jwt.secret"))
                     .isEqualTo("BrainOS-dev-only-jwt-secret-change-before-production");
+            assertThat(context.getEnvironment().getRequiredProperty("brainos.ai.chat.chatgpt.base-url"))
+                    .isEqualTo("https://api.openai.com/v1");
+            assertThat(context.getEnvironment().getRequiredProperty("brainos.ai.chat.chatgpt.model"))
+                    .isEqualTo("gpt-4.1-mini");
+            assertThat(context.getEnvironment().getProperty("brainos.ai.chat.chatgpt.api-key"))
+                    .isEmpty();
         });
     }
 
@@ -182,6 +188,7 @@ class ConfigurationContractTest {
                 .contains("CHROMA_API_KEY=")
                 .contains("CHROMA_TENANT=")
                 .contains("CHROMA_DATABASE=")
+                .contains("OPENAI_API_KEY=")
                 .contains("Required when running the backend with any profile other than dev");
     }
 

@@ -11,10 +11,11 @@ import reactor.test.StepVerifier;
 class ChatModelRouterTest {
 
     @Test
-    void routesOnlyNamedQwenAndDeepSeekModels() {
+    void routesOnlyNamedQwenDeepSeekAndChatGptModels() {
         SpringAiChatModelRouter router = new SpringAiChatModelRouter(Map.of(
                 ChatModelType.QWEN, prompt -> Flux.just("千问:" + prompt.getContents()),
-                ChatModelType.DEEPSEEK, prompt -> Flux.just("深度:" + prompt.getContents())));
+                ChatModelType.DEEPSEEK, prompt -> Flux.just("深度:" + prompt.getContents()),
+                ChatModelType.CHATGPT, prompt -> Flux.just("GPT:" + prompt.getContents())));
 
         StepVerifier.create(router.stream(ChatModelType.QWEN, new Prompt("制度")))
                 .expectNext("千问:制度")
@@ -22,6 +23,10 @@ class ChatModelRouterTest {
         StepVerifier.create(router.stream(ChatModelType.DEEPSEEK, new Prompt("制度")))
                 .expectNext("深度:制度")
                 .verifyComplete();
+        StepVerifier.create(router.stream(ChatModelType.CHATGPT, new Prompt("制度")))
+                .expectNext("GPT:制度")
+                .verifyComplete();
         assertThat(ChatModelType.valueOf("QWEN")).isEqualTo(ChatModelType.QWEN);
+        assertThat(ChatModelType.valueOf("CHATGPT")).isEqualTo(ChatModelType.CHATGPT);
     }
 }

@@ -257,7 +257,12 @@ async function scrollToBottom(): Promise<void> {
 }
 
 function modelLabel(model: ChatModel): string {
-  return model === 'QWEN' ? '通义千问' : 'DeepSeek'
+  const labels: Record<ChatModel, string> = {
+    QWEN: '通义千问',
+    DEEPSEEK: 'DeepSeek',
+    CHATGPT: 'ChatGPT',
+  }
+  return labels[model]
 }
 
 function knowledgeName(id: number): string {
@@ -300,6 +305,7 @@ function knowledgeName(id: number): string {
         >
           <el-option label="通义千问" value="QWEN" />
           <el-option label="DeepSeek" value="DEEPSEEK" />
+          <el-option label="ChatGPT" value="CHATGPT" />
         </el-select>
         <el-button
           type="primary"

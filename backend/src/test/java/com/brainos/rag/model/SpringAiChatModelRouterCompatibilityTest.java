@@ -39,12 +39,14 @@ class SpringAiChatModelRouterCompatibilityTest {
     }
 
     @Test
-    void consumesOpenAiCompatibleServerSentEvents() {
+    void consumesOpenAiChatCompletionsServerSentEvents() {
         String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
-        AiChatProperties.Provider provider = new AiChatProperties.Provider(baseUrl, "qwen-plus", "test-key");
-        SpringAiChatModelRouter router = new SpringAiChatModelRouter(new AiChatProperties(provider, provider));
+        AiChatProperties.Provider provider =
+                new AiChatProperties.Provider(baseUrl, "gpt-4.1-mini", "test-key");
+        SpringAiChatModelRouter router =
+                new SpringAiChatModelRouter(new AiChatProperties(provider, provider, provider));
 
-        List<String> parts = router.stream(ChatModelType.QWEN, new Prompt("问题"))
+        List<String> parts = router.stream(ChatModelType.CHATGPT, new Prompt("问题"))
                 .collectList()
                 .block(Duration.ofSeconds(5));
 
@@ -55,7 +57,7 @@ class SpringAiChatModelRouterCompatibilityTest {
         String delta = content.isEmpty() ? "{}" : "{\"role\":\"assistant\",\"content\":\"" + content + "\"}";
         String finish = finishReason == null ? "null" : "\"" + finishReason + "\"";
         return "data: {\"id\":\"chatcmpl-test\",\"object\":\"chat.completion.chunk\","
-                + "\"created\":1784044800,\"model\":\"qwen-plus\",\"choices\":[{\"index\":0,"
+                + "\"created\":1784044800,\"model\":\"gpt-4.1-mini\",\"choices\":[{\"index\":0,"
                 + "\"delta\":" + delta + ",\"logprobs\":null,\"finish_reason\":" + finish + "}]}\n\n";
     }
 }
