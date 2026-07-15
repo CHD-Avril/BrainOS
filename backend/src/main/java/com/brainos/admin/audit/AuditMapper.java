@@ -29,6 +29,7 @@ public interface AuditMapper extends AuditRecorder {
             LEFT JOIN sys_user u ON u.id = l.user_id
             <where>
               <if test="userId != null">AND l.user_id = #{userId}</if>
+              <if test="username != null">AND u.username = #{username}</if>
               <if test="action != null">AND l.action = #{action}</if>
               <if test="from != null">AND l.created_at &gt;= #{from}</if>
               <if test="to != null">AND l.created_at &lt;= #{to}</if>
@@ -39,6 +40,7 @@ public interface AuditMapper extends AuditRecorder {
             """)
     List<AuditLogView> findPage(
             @Param("userId") Long userId,
+            @Param("username") String username,
             @Param("action") String action,
             @Param("from") Instant from,
             @Param("to") Instant to,
@@ -48,8 +50,10 @@ public interface AuditMapper extends AuditRecorder {
     @Select("""
             <script>
             SELECT COUNT(*) FROM audit_log l
+            LEFT JOIN sys_user u ON u.id = l.user_id
             <where>
               <if test="userId != null">AND l.user_id = #{userId}</if>
+              <if test="username != null">AND u.username = #{username}</if>
               <if test="action != null">AND l.action = #{action}</if>
               <if test="from != null">AND l.created_at &gt;= #{from}</if>
               <if test="to != null">AND l.created_at &lt;= #{to}</if>
@@ -58,6 +62,7 @@ public interface AuditMapper extends AuditRecorder {
             """)
     long count(
             @Param("userId") Long userId,
+            @Param("username") String username,
             @Param("action") String action,
             @Param("from") Instant from,
             @Param("to") Instant to);

@@ -12,6 +12,7 @@ import org.springframework.ai.chroma.vectorstore.ChromaApi;
 import org.springframework.ai.chroma.vectorstore.ChromaFilterExpressionConverter;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.web.client.ResourceAccessException;
 
 public final class SpringAiVectorIndex implements VectorIndexPort {
 
@@ -21,6 +22,8 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
     private static final String DISTANCE_METADATA_KEY = "hnsw:space";
     private static final String DISTANCE_FUNCTION = "cosine";
     private static final int MAX_TOP_K = 100;
+    private static final int DELETE_MAX_ATTEMPTS = 3;
+    private static final long DELETE_RETRY_DELAY_MILLIS = 200L;
 
     private final ChromaApi chromaApi;
     private final String tenant;
@@ -97,12 +100,28 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
     @Override
     public void deleteDocument(long documentId) {
         requirePositive(documentId, "documentId");
-        chromaApi.deleteEmbeddings(
-                tenant,
-                database,
-                collectionId(),
-                new ChromaApi.DeleteEmbeddingsRequest(
-                        null, whereEquals("documentId", documentId)));
+        ChromaApi.DeleteEmbeddingsRequest request = new ChromaApi.DeleteEmbeddingsRequest(
+                null, whereEquals("documentId", documentId));
+        for (int attempt = 1; attempt <= DELETE_MAX_ATTEMPTS; attempt++) {
+            try {
+                chromaApi.deleteEmbeddings(tenant, database, collectionId(), request);
+                return;
+            } catch (ResourceAccessException exception) {
+                if (attempt == DELETE_MAX_ATTEMPTS) {
+                    throw exception;
+                }
+                pauseBeforeDeleteRetry(attempt);
+            }
+        }
+    }
+
+    private static void pauseBeforeDeleteRetry(int attempt) {
+        try {
+            Thread.sleep(DELETE_RETRY_DELAY_MILLIS * attempt);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Chroma delete retry interrupted", exception);
+        }
     }
 
     private List<RetrievedChunk> toResults(ChromaApi.QueryResponse response, double threshold) {

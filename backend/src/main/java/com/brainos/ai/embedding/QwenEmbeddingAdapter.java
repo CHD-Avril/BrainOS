@@ -7,6 +7,8 @@ import org.springframework.ai.openai.api.OpenAiApi;
 
 public final class QwenEmbeddingAdapter implements EmbeddingPort {
 
+    private static final int MAX_BATCH_SIZE = 10;
+
     private final QwenEmbeddingProperties properties;
     private volatile OpenAiApi api;
 
@@ -28,11 +30,16 @@ public final class QwenEmbeddingAdapter implements EmbeddingPort {
             throw new IllegalArgumentException("embedding input must contain non-blank text");
         }
         List<String> input = List.copyOf(texts);
-        OpenAiApi.EmbeddingList<OpenAiApi.Embedding> response = api()
-                .embeddings(new OpenAiApi.EmbeddingRequest<>(
-                        input, properties.model(), "float", properties.dimensions(), null))
-                .getBody();
-        return orderedVectors(response, input.size());
+        List<float[]> vectors = new ArrayList<>(input.size());
+        for (int start = 0; start < input.size(); start += MAX_BATCH_SIZE) {
+            List<String> batch = input.subList(start, Math.min(start + MAX_BATCH_SIZE, input.size()));
+            OpenAiApi.EmbeddingList<OpenAiApi.Embedding> response = api()
+                    .embeddings(new OpenAiApi.EmbeddingRequest<>(
+                            batch, properties.model(), "float", properties.dimensions(), null))
+                    .getBody();
+            vectors.addAll(orderedVectors(response, batch.size()));
+        }
+        return List.copyOf(vectors);
     }
 
     private OpenAiApi api() {

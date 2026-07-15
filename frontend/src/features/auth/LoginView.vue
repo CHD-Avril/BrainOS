@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import axios from 'axios'
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './store'
@@ -30,11 +31,17 @@ async function submit(): Promise<void> {
         ? redirect
         : { name: 'dashboard' },
     )
-  } catch {
-    authenticationError.value = '用户名或密码错误，请重试'
+  } catch (reason) {
+    authenticationError.value = loginErrorMessage(reason)
   } finally {
     submitting.value = false
   }
+}
+
+function loginErrorMessage(reason: unknown): string {
+  return axios.isAxiosError(reason) && reason.response?.status === 401
+    ? '用户名或密码错误，请重试'
+    : '登录服务暂时不可用，请稍后重试'
 }
 </script>
 
@@ -54,10 +61,11 @@ async function submit(): Promise<void> {
       />
 
       <el-form :model="form" label-position="top" @submit.prevent="submit">
-        <el-form-item label="用户名" :error="errors.username">
+        <el-form-item label="登录用户名" :error="errors.username">
           <el-input
             v-model="form.username"
             aria-label="用户名"
+            placeholder="例如 user（不是显示名称）"
             autocomplete="username"
             :disabled="submitting"
           />

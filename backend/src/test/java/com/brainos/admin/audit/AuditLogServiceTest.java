@@ -22,19 +22,21 @@ class AuditLogServiceTest {
         Instant to = Instant.parse("2026-07-15T00:00:00Z");
         AuditLogView row = new AuditLogView(
                 3L, 1L, "admin", "USER_CREATE", "USER", "21", "SUCCESS", "创建用户", to);
-        when(mapper.count(1L, "USER_CREATE", from, to)).thenReturn(1L);
-        when(mapper.findPage(1L, "USER_CREATE", from, to, 20, 20L)).thenReturn(List.of(row));
+        when(mapper.count(1L, "admin", "USER_CREATE", from, to)).thenReturn(1L);
+        when(mapper.findPage(1L, "admin", "USER_CREATE", from, to, 20, 20L))
+                .thenReturn(List.of(row));
 
-        var result = service.list(1L, " user_create ", from, to, 2, 20);
+        var result = service.list(1L, " Admin ", " user_create ", from, to, 2, 20);
 
         assertThat(result.items()).containsExactly(row);
         assertThat(result.total()).isOne();
-        verify(mapper).findPage(1L, "USER_CREATE", from, to, 20, 20L);
+        verify(mapper).findPage(1L, "admin", "USER_CREATE", from, to, 20, 20L);
     }
 
     @Test
     void rejectsReversedTimeRange() {
         assertThatThrownBy(() -> service.list(
+                        null,
                         null,
                         null,
                         Instant.parse("2026-07-15T00:00:00Z"),

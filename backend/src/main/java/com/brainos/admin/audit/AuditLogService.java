@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditLogService {
 
     private static final Pattern ACTION = Pattern.compile("[A-Z][A-Z0-9_]{1,63}");
+    private static final Pattern USERNAME = Pattern.compile("[a-z][a-z0-9_.-]{2,31}");
 
     private final AuditMapper audits;
 
@@ -24,7 +25,13 @@ public class AuditLogService {
 
     @Transactional(readOnly = true)
     public PagedResult<AuditLogView> list(
-            Long userId, String rawAction, Instant from, Instant to, int page, int size) {
+            Long userId,
+            String rawUsername,
+            String rawAction,
+            Instant from,
+            Instant to,
+            int page,
+            int size) {
         if ((userId != null && userId <= 0)
                 || page < 1
                 || size < 1
@@ -32,13 +39,30 @@ public class AuditLogService {
                 || (from != null && to != null && from.isAfter(to))) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR);
         }
+        String username = normalizeUsername(rawUsername);
         String action = normalizeAction(rawAction);
-        long total = audits.count(userId, action, from, to);
+        long total = audits.count(userId, username, action, from, to);
         return new PagedResult<>(
-                audits.findPage(userId, action, from, to, size, (long) (page - 1) * size),
+                audits.findPage(
+                        userId,
+                        username,
+                        action,
+                        from,
+                        to,
+                        size,
+                        (long) (page - 1) * size),
                 total,
                 page,
                 size);
+    }
+
+    private static String normalizeUsername(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String username = raw.trim().toLowerCase(Locale.ROOT);
+        if (!USERNAME.matcher(username).matches()) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+        return username;
     }
 
     private static String normalizeAction(String raw) {
