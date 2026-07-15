@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { normalizeApiBaseUrl } from './env'
 
 describe('normalizeApiBaseUrl', () => {
@@ -9,5 +9,16 @@ describe('normalizeApiBaseUrl', () => {
 
   it('rejects a non-http URL', () => {
     expect(() => normalizeApiBaseUrl('javascript:alert(1)')).toThrow('API address must use HTTP or HTTPS')
+  })
+
+  it('normalizes localhost without a browser URL constructor', () => {
+    const originalUrl = globalThis.URL
+    vi.stubGlobal('URL', undefined)
+    try {
+      expect(normalizeApiBaseUrl('http://localhost:8080')).toBe('http://localhost:8080/api/v1')
+    }
+    finally {
+      vi.stubGlobal('URL', originalUrl)
+    }
   })
 })
