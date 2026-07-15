@@ -20,5 +20,5 @@ decisions:
   alternate_chat_model: deepseek
   mobile: excluded
 notes: >-
-  所有模块均已实现并完成整仓验收；122 个后端单元测试、45 个后端集成测试、
+  所有模块均已实现并完成整仓验收；123 个后端单元测试、45 个后端集成测试、
   37 个前端组件测试和 8 个双分辨率浏览器测试全部通过。
