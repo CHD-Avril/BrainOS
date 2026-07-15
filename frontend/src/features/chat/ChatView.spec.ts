@@ -2,6 +2,7 @@ import ElementPlus from 'element-plus'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatView from './ChatView.vue'
+import chatViewSource from './ChatView.vue?raw'
 import { chatApi, type ChatStreamEvent } from './api'
 import { knowledgeApi } from '@/features/knowledge/api'
 
@@ -47,6 +48,13 @@ describe('ChatView', () => {
     vi.mocked(knowledgeApi.list).mockResolvedValue([knowledge])
     vi.mocked(chatApi.list).mockResolvedValue([session])
     vi.mocked(chatApi.get).mockResolvedValue({ session, messages: [] })
+  })
+
+  it('keeps the composer visible while only the message history scrolls', () => {
+    expect(chatViewSource).toMatch(/\.chat-workspace\s*\{[^}]*min-height:\s*0;/s)
+    expect(chatViewSource).toMatch(/\.conversation-panel\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s)
+    expect(chatViewSource).toMatch(/\.message-viewport\s*\{[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto;/s)
+    expect(chatViewSource).toMatch(/\.composer\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/s)
   })
 
   it('streams an answer and exposes its cited source', async () => {
