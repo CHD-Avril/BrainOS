@@ -1,0 +1,33 @@
+{
+  "name": "brainos-miniprogram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-alpha-5020120260710001",
+    "@dcloudio/uni-components": "3.0.0-alpha-5020120260710001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-alpha-5020120260710001",
+    "pinia": "2.1.7",
+    "vue": "3.4.21"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "3.4.31",
+    "@dcloudio/uni-cli-shared": "3.0.0-alpha-5020120260710001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-alpha-5020120260710001",
+    "@types/node": "26.1.1",
+    "@vue/test-utils": "2.4.11",
+    "jsdom": "27.4.0",
+    "sass": "1.89.2",
+    "typescript": "5.9.3",
+    "vite": "5.2.8",
+    "vitest": "1.6.1",
+    "vue-tsc": "3.3.7"
+  }
+}

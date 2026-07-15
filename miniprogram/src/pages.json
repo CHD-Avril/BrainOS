@@ -1,0 +1,25 @@
+{
+  "pages": [
+    { "path": "pages/login/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/knowledge/index", "style": { "navigationBarTitleText": "知识库", "enablePullDownRefresh": true } },
+    { "path": "pages/chat/index", "style": { "navigationBarTitleText": "AI 问答", "enablePullDownRefresh": true } },
+    { "path": "pages/profile/index", "style": { "navigationBarTitleText": "我的" } }
+  ],
+  "tabBar": {
+    "color": "#64748b",
+    "selectedColor": "#2563eb",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/knowledge/index", "text": "知识库" },
+      { "pagePath": "pages/chat/index", "text": "AI 问答" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "BrainOS",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f8fafc"
+  }
+}

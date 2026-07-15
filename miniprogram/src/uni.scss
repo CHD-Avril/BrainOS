@@ -1,0 +1,25 @@
+page {
+  --color-primary: #2563eb;
+  --color-primary-soft: #eff6ff;
+  --color-heading: #1e293b;
+  --color-text: #334155;
+  --color-muted: #64748b;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  min-height: 100%;
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.55;
+}
+
+.page { padding: 32rpx; }
+.card { background: var(--color-surface); border: 1rpx solid var(--color-border); border-radius: 20rpx; }
+.primary-button { color: #fff; background: var(--color-primary); border-radius: 14rpx; }
+.muted { color: var(--color-muted); }
+.error-text { color: var(--color-danger); }
