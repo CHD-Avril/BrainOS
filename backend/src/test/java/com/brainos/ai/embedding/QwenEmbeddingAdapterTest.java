@@ -9,6 +9,7 @@ import ch.qos.logback.core.read.ListAppender;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -62,6 +63,36 @@ class QwenEmbeddingAdapterTest {
                 .contains("\"dimensions\":1024")
                 .contains("\"input\":[\"制度\",\"请假\"]")
                 .doesNotContain("test-secret");
+    }
+
+    @Test
+    void splitsLargeInputIntoProviderSizedBatchesAndPreservesOrder() throws InterruptedException {
+        server.enqueue(jsonResponse(embeddingResponse(10, 0)));
+        server.enqueue(jsonResponse(embeddingResponse(10, 10)));
+        server.enqueue(jsonResponse(embeddingResponse(9, 20)));
+        QwenEmbeddingAdapter adapter = new QwenEmbeddingAdapter(new QwenEmbeddingProperties(
+                server.url("/v1").toString(), "text-embedding-v4", 1024, "test-secret"));
+        List<String> inputs = IntStream.range(0, 29)
+                .mapToObj(index -> "切片-" + index)
+                .toList();
+
+        List<float[]> vectors = adapter.embedAll(inputs);
+
+        assertThat(vectors).hasSize(29);
+        for (int index = 0; index < vectors.size(); index++) {
+            assertThat(vectors.get(index)).containsExactly((float) index);
+        }
+        assertThat(server.takeRequest(2, TimeUnit.SECONDS).getBody().readUtf8())
+                .contains("\"切片-0\"")
+                .contains("\"切片-9\"")
+                .doesNotContain("\"切片-10\"");
+        assertThat(server.takeRequest(2, TimeUnit.SECONDS).getBody().readUtf8())
+                .contains("\"切片-10\"")
+                .contains("\"切片-19\"")
+                .doesNotContain("\"切片-20\"");
+        assertThat(server.takeRequest(2, TimeUnit.SECONDS).getBody().readUtf8())
+                .contains("\"切片-20\"")
+                .contains("\"切片-28\"");
     }
 
     @Test
@@ -145,5 +176,25 @@ class QwenEmbeddingAdapterTest {
         assertThatThrownBy(() -> adapter.embedAll(List.of("valid", " ")))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(server.getRequestCount()).isZero();
+    }
+
+    private static MockResponse jsonResponse(String body) {
+        return new MockResponse().setHeader("Content-Type", "application/json").setBody(body);
+    }
+
+    private static String embeddingResponse(int count, int valueOffset) {
+        StringBuilder data = new StringBuilder();
+        for (int index = 0; index < count; index++) {
+            if (!data.isEmpty()) {
+                data.append(',');
+            }
+            data.append("{\"object\":\"embedding\",\"index\":")
+                    .append(index)
+                    .append(",\"embedding\":[")
+                    .append(valueOffset + index)
+                    .append("]}");
+        }
+        return "{\"object\":\"list\",\"data\":[" + data
+                + "],\"model\":\"text-embedding-v4\",\"usage\":{\"prompt_tokens\":1,\"total_tokens\":1}}";
     }
 }

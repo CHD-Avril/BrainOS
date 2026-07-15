@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okhttp3.mockwebserver.SocketPolicy;
 import org.junit.jupiter.api.Test;
 
 class SpringAiVectorIndexTest {
@@ -79,6 +80,31 @@ class SpringAiVectorIndexTest {
                     .isEqualTo("/api/v2/tenants/tenant-123/databases/brainos-cloud/collections/collection-id/delete");
             assertThat(deleteRequest.getHeader("x-chroma-token"))
                     .isEqualTo("cloud-api-key");
+        }
+    }
+
+    @Test
+    void retriesTransientConnectionFailureWhenDeletingDocumentVectors() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse()
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("""
+                            {"id":"collection-id","name":"brainos_documents",\
+                            "metadata":{"hnsw:space":"cosine"}}
+                            """));
+            server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST));
+            server.enqueue(new MockResponse().setResponseCode(200));
+            server.start();
+            SpringAiVectorIndex cloudIndex = new SpringAiVectorIndex(
+                    server.url("/").toString(),
+                    "cloud-api-key",
+                    "tenant-123",
+                    "brainos-cloud",
+                    constantEmbedding());
+
+            cloudIndex.deleteDocument(7L);
+
+            assertThat(server.getRequestCount()).isEqualTo(3);
         }
     }
 

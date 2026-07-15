@@ -79,6 +79,21 @@ class ConfigurationContractTest {
         });
     }
 
+    @Test
+    void multipartLimitsMatchTheTwentyMegabyteDocumentUploadContract() {
+        contextRunner.withPropertyValues("spring.profiles.active=dev").run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(
+                            context.getEnvironment()
+                                    .getRequiredProperty("spring.servlet.multipart.max-file-size"))
+                    .isEqualTo("20MB");
+            assertThat(
+                            context.getEnvironment()
+                                    .getRequiredProperty("spring.servlet.multipart.max-request-size"))
+                    .isEqualTo("21MB");
+        });
+    }
+
     @ParameterizedTest(name = "prod rejects missing {0}")
     @ValueSource(
             strings = {
