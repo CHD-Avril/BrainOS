@@ -10,7 +10,6 @@ export function createAuthNavigation(deps: NavigationDeps) {
   return {
     restoreInitialRoute(): void {
       if (deps.readSession()) deps.switchTab('/pages/knowledge/index')
-      else deps.reLaunch('/pages/login/index')
     },
     requireAuth(): boolean {
       if (deps.readSession()) return true

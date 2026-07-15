@@ -2,6 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { createAuthNavigation } from './auth'
 
 describe('auth navigation', () => {
+  it('keeps an anonymous startup on the initial login page', () => {
+    const reLaunch = vi.fn()
+    const navigation = createAuthNavigation({ readSession: () => null, reLaunch, switchTab: vi.fn() })
+    navigation.restoreInitialRoute()
+    expect(reLaunch).not.toHaveBeenCalled()
+  })
+
   it('redirects an anonymous user to login', () => {
     const reLaunch = vi.fn()
     const navigation = createAuthNavigation({ readSession: () => null, reLaunch, switchTab: vi.fn() })

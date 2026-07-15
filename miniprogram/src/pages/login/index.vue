@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useAuthStore } from '@/features/auth/store'
+import { restoreInitialRoute } from '@/navigation/auth'
 
 const auth = useAuthStore()
 const form = reactive({ username: '', password: '' })
+
+onShow(() => restoreInitialRoute())
 
 async function submit() {
   const username = form.username.trim()
