@@ -6,6 +6,8 @@
     { "path": "pages/knowledge/detail", "style": { "navigationBarTitleText": "知识库详情" } },
     { "path": "pages/documents/index", "style": { "navigationBarTitleText": "文档管理", "enablePullDownRefresh": true } },
     { "path": "pages/chat/index", "style": { "navigationBarTitleText": "AI 问答", "enablePullDownRefresh": true } },
+    { "path": "pages/chat/create", "style": { "navigationBarTitleText": "新建对话" } },
+    { "path": "pages/chat/conversation", "style": { "navigationBarTitleText": "AI 问答" } },
     { "path": "pages/profile/index", "style": { "navigationBarTitleText": "我的" } }
   ],
   "tabBar": {
