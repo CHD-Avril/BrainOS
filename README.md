@@ -150,4 +150,5 @@ cd frontend && pnpm exec playwright test
 - [部署说明](docs/DEPLOYMENT.md)
 - [答辩演示脚本](docs/DEFENSE-DEMO.md)
 - [测试与验收报告](docs/TEST-REPORT.md)
+- [五人开发分工](docs/TEAM-WORK-DIVISION.md)
 - [Spec 导航](specs/index.md)
