@@ -1,0 +1,24 @@
+module: overview
+stage: overview
+status: done
+version: 1.0.0
+review_requested_from: Baron
+approved_by: Baron
+updated_at: 2026-07-15
+completion:
+  requirements: complete
+  design: complete
+  tasks: complete
+  user_written_review: complete
+decisions:
+  scope: defense-light-complete
+  architecture: modular-monolith
+  frontend: vue3-element-plus-pc-web
+  vector_store: chroma
+  embedding_model: qwen
+  default_chat_model: qwen
+  alternate_chat_model: deepseek
+  mobile: excluded
+notes: >-
+  所有模块均已实现并完成整仓验收；123 个后端单元测试、45 个后端集成测试、
+  37 个前端组件测试和 8 个双分辨率浏览器测试全部通过。

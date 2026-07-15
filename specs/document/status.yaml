@@ -1,0 +1,7 @@
+module: document
+stage: module
+status: done
+approved_by: Baron
+last_update: 2026-07-15
+depends_on: [foundation, auth, knowledge]
+notes: 文档上传、解析、切片、Chroma 索引、重试删除和 PC 状态页面已完成。

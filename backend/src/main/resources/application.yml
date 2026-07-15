@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: brainos-backend
+  profiles:
+    default: dev
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+brainos:
+  document:
+    chunk-size: ${BRAINOS_DOCUMENT_CHUNK_SIZE:500}
+    overlap: ${BRAINOS_DOCUMENT_CHUNK_OVERLAP:80}
+  ai:
+    retrieval-threshold: ${BRAINOS_RETRIEVAL_THRESHOLD:0.45}
+    embedding:
+      base-url: ${QWEN_EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+      model: ${QWEN_EMBEDDING_MODEL:text-embedding-v4}
+      dimensions: ${QWEN_EMBEDDING_DIMENSIONS:1024}
+      api-key: ${QWEN_API_KEY:}
+    chat:
+      qwen:
+        base-url: ${QWEN_CHAT_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+        model: ${QWEN_CHAT_MODEL:qwen-turbo}
+        api-key: ${QWEN_API_KEY:}
+      deepseek:
+        base-url: ${DEEPSEEK_CHAT_BASE_URL:https://api.deepseek.com}
+        model: ${DEEPSEEK_CHAT_MODEL:deepseek-v4-flash}
+        api-key: ${DEEPSEEK_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/brainos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8}
+    username: ${MYSQL_USER:brainos}
+    password: ${MYSQL_PASSWORD:brainos_dev}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+brainos:
+  auth:
+    jwt:
+      secret: ${BRAINOS_JWT_SECRET:BrainOS-dev-only-jwt-secret-change-before-production}
+  chroma:
+    base-url: ${CHROMA_URL:http://localhost:8000}
+    tenant: ${CHROMA_TENANT:default_tenant}
+    database: ${CHROMA_DATABASE:default_database}
+    api-key: ${CHROMA_API_KEY:}
+  storage:
+    root: ${BRAINOS_STORAGE_PATH:./data/uploads}
+  admin:
+    password: ${BRAINOS_ADMIN_PASSWORD:BrainOS@123}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!dev"
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+brainos:
+  auth:
+    jwt:
+      secret: ${BRAINOS_JWT_SECRET}
+  chroma:
+    base-url: ${CHROMA_URL}
+    tenant: ${CHROMA_TENANT}
+    database: ${CHROMA_DATABASE}
+    api-key: ${CHROMA_API_KEY:}
+  storage:
+    root: ${BRAINOS_STORAGE_PATH}
+  admin:
+    password: ${BRAINOS_ADMIN_PASSWORD}

@@ -1,0 +1,36 @@
+{
+  "name": "brainos-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "2.3.2",
+    "axios": "1.18.1",
+    "dompurify": "3.4.12",
+    "echarts": "6.0.0",
+    "element-plus": "2.14.3",
+    "marked": "18.0.6",
+    "pinia": "3.0.4",
+    "vue": "3.5.39",
+    "vue-router": "4.6.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.1",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vue/compiler-sfc": "3.5.39",
+    "@vue/test-utils": "2.4.11",
+    "jsdom": "27.4.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.10",
+    "vue-tsc": "3.3.7"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

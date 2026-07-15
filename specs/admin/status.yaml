@@ -1,0 +1,8 @@
+module: admin
+stage: module
+status: done
+approved_by: Baron
+last_update: 2026-07-15
+depends_on:
+  - auth
+notes: 管理 API、审计写入/查询与 Vue 页面已完成，通过权限、集成与视觉测试。

@@ -1,0 +1,8 @@
+module: knowledge
+stage: module
+status: done
+approved_by: Baron
+last_update: 2026-07-15
+depends_on:
+  - auth
+notes: 知识库 CRUD、级联清理和 PC 卡片页面已完成并通过测试与桌面视觉检查。

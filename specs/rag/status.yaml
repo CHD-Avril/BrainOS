@@ -1,0 +1,7 @@
+module: rag
+stage: module
+status: done
+approved_by: Baron
+last_update: 2026-07-15
+depends_on: [auth, knowledge, document]
+notes: 检索、模型路由、SSE、会话、引用与前端问答工作区已完成，并通过真实 Chroma 全链路验收。
