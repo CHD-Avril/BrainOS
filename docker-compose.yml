@@ -58,6 +58,25 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # 可选：托管前端 dist 并反向代理 /api 到后端。
+  # 仅在需要时启动：docker compose --profile web up -d nginx
+  # 启动前需先执行 frontend 构建生成 frontend/dist。
+  nginx:
+    image: nginx:1.27-alpine
+    profiles: ["web"]
+    ports:
+      - "80:80"
+    environment:
+      # 后端上游地址。后端在宿主机运行时用 host.docker.internal；
+      # 若后端也在 Compose 网络内，改为对应服务名，如 backend:8080。
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-host.docker.internal:8080}
+    volumes:
+      - ./deploy/nginx/templates:/etc/nginx/templates:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
 volumes:
   mysql_data:
   redis_data:
