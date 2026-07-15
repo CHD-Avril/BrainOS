@@ -16,7 +16,7 @@ brainos:
     chunk-size: ${BRAINOS_DOCUMENT_CHUNK_SIZE:500}
     overlap: ${BRAINOS_DOCUMENT_CHUNK_OVERLAP:80}
   ai:
-    retrieval-threshold: ${BRAINOS_RETRIEVAL_THRESHOLD:0.62}
+    retrieval-threshold: ${BRAINOS_RETRIEVAL_THRESHOLD:0.45}
     embedding:
       base-url: ${QWEN_EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
       model: ${QWEN_EMBEDDING_MODEL:text-embedding-v4}
@@ -25,7 +25,7 @@ brainos:
     chat:
       qwen:
         base-url: ${QWEN_CHAT_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
-        model: ${QWEN_CHAT_MODEL:qwen-plus}
+        model: ${QWEN_CHAT_MODEL:qwen-turbo}
         api-key: ${QWEN_API_KEY:}
       deepseek:
         base-url: ${DEEPSEEK_CHAT_BASE_URL:https://api.deepseek.com}

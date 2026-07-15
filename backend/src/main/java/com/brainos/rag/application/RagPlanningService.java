@@ -24,7 +24,7 @@ public class RagPlanningService {
     @Autowired
     public RagPlanningService(
             RagRetriever retriever,
-            @Value("${brainos.ai.retrieval-threshold:0.62}") double threshold) {
+            @Value("${brainos.ai.retrieval-threshold:0.45}") double threshold) {
         if (!Double.isFinite(threshold) || threshold < 0d || threshold > 1d) {
             throw new IllegalArgumentException("retrieval threshold must be between 0 and 1");
         }

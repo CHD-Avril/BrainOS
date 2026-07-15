@@ -14,23 +14,27 @@ import org.junit.jupiter.api.Test;
 class RagPlanningServiceTest {
 
     private final RagRetriever retriever = mock(RagRetriever.class);
-    private final RagPlanningService service = new RagPlanningService(retriever, 0.62d);
+    private static final double CALIBRATED_THRESHOLD = 0.45d;
+
+    private final RagPlanningService service =
+            new RagPlanningService(retriever, CALIBRATED_THRESHOLD);
 
     @Test
     void noReliableChunkReturnsFallbackWithoutModelWork() {
-        when(retriever.retrieve(7L, "年假有几天？", 5, 0.62d)).thenReturn(List.of());
+        when(retriever.retrieve(7L, "年假有几天？", 5, CALIBRATED_THRESHOLD))
+                .thenReturn(List.of());
 
         RagAnswerPlan plan = service.plan(7L, " 年假有几天？ ");
 
         assertThat(plan.isFallback()).isTrue();
         assertThat(plan.fallback()).isEqualTo("当前知识库中未找到可靠依据");
         assertThat(plan.citations()).isEmpty();
-        verify(retriever).retrieve(7L, "年假有几天？", 5, 0.62d);
+        verify(retriever).retrieve(7L, "年假有几天？", 5, CALIBRATED_THRESHOLD);
     }
 
     @Test
     void groundedPlanSortsCitationsByScore() {
-        when(retriever.retrieve(7L, "年假", 5, 0.62d))
+        when(retriever.retrieve(7L, "年假", 5, CALIBRATED_THRESHOLD))
                 .thenReturn(List.of(candidate(7L, 0.75d), candidate(7L, 0.92d)));
 
         RagAnswerPlan plan = service.plan(7L, "年假");
@@ -41,7 +45,7 @@ class RagPlanningServiceTest {
 
     @Test
     void foreignKnowledgeBaseMetadataIsRejected() {
-        when(retriever.retrieve(7L, "年假", 5, 0.62d))
+        when(retriever.retrieve(7L, "年假", 5, CALIBRATED_THRESHOLD))
                 .thenReturn(List.of(candidate(8L, 0.92d)));
 
         assertThatThrownBy(() -> service.plan(7L, "年假"))
