@@ -1,10 +1,15 @@
 package com.brainos.document.indexing;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.brainos.ai.embedding.EmbeddingPort;
 import com.brainos.document.chunking.DocumentChunk;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.Test;
 
 class SpringAiVectorIndexTest {
@@ -39,6 +44,54 @@ class SpringAiVectorIndexTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> index.replaceDocument(2L, List.of(duplicate, duplicate)))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void sendsCloudTokenAndUsesConfiguredTenantAndDatabase() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse()
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("""
+                            {"id":"collection-id","name":"brainos_documents",\
+                            "metadata":{"hnsw:space":"cosine"}}
+                            """));
+            server.enqueue(new MockResponse().setResponseCode(200));
+            server.start();
+
+            SpringAiVectorIndex cloudIndex = new SpringAiVectorIndex(
+                    server.url("/").toString(),
+                    "cloud-api-key",
+                    "tenant-123",
+                    "brainos-cloud",
+                    constantEmbedding());
+
+            cloudIndex.deleteDocument(7L);
+
+            RecordedRequest collectionRequest = server.takeRequest(2, TimeUnit.SECONDS);
+            RecordedRequest deleteRequest = server.takeRequest(2, TimeUnit.SECONDS);
+            assertThat(collectionRequest).isNotNull();
+            assertThat(collectionRequest.getPath())
+                    .isEqualTo("/api/v2/tenants/tenant-123/databases/brainos-cloud/collections/brainos_documents");
+            assertThat(collectionRequest.getHeader("x-chroma-token"))
+                    .isEqualTo("cloud-api-key");
+            assertThat(deleteRequest).isNotNull();
+            assertThat(deleteRequest.getPath())
+                    .isEqualTo("/api/v2/tenants/tenant-123/databases/brainos-cloud/collections/collection-id/delete");
+            assertThat(deleteRequest.getHeader("x-chroma-token"))
+                    .isEqualTo("cloud-api-key");
+        }
+    }
+
+    @Test
+    void rejectsBlankCloudRoutingValues() {
+        assertThatThrownBy(() -> new SpringAiVectorIndex(
+                        "https://api.trychroma.com", "key", " ", "database", constantEmbedding()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("tenant");
+        assertThatThrownBy(() -> new SpringAiVectorIndex(
+                        "https://api.trychroma.com", "key", "tenant", " ", constantEmbedding()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("database");
     }
 
     private static EmbeddingPort constantEmbedding() {

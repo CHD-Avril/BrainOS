@@ -13,7 +13,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
     AdminSeedProperties.class,
     RequiredDataSourceProperties.class,
     RequiredRedisProperties.class,
-    RequiredChromaProperties.class,
     RequiredStorageProperties.class
 })
 class AdminSeedFlywayConfiguration {

@@ -33,6 +33,9 @@ class ConfigurationContractTest {
         "REDIS_PORT=6380",
         "REDIS_PASSWORD=redis-secret",
         "CHROMA_URL=https://chroma.internal",
+        "CHROMA_API_KEY=cloud-secret",
+        "CHROMA_TENANT=tenant-123",
+        "CHROMA_DATABASE=brainos-prod",
         "BRAINOS_STORAGE_PATH=/srv/brainos/uploads",
         "BRAINOS_ADMIN_PASSWORD=ProdAdmin@456",
         "BRAINOS_JWT_SECRET=prod-only-jwt-secret-with-at-least-32-bytes"
@@ -61,6 +64,12 @@ class ConfigurationContractTest {
                     .isEqualTo("6379");
             assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.base-url"))
                     .isEqualTo("http://localhost:8000");
+            assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.tenant"))
+                    .isEqualTo("default_tenant");
+            assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.database"))
+                    .isEqualTo("default_database");
+            assertThat(context.getEnvironment().getProperty("brainos.chroma.api-key"))
+                    .isEmpty();
             assertThat(context.getEnvironment().getRequiredProperty("brainos.storage.root"))
                     .isEqualTo("./data/uploads");
             assertThat(context.getEnvironment().getRequiredProperty("brainos.admin.password"))
@@ -80,6 +89,8 @@ class ConfigurationContractTest {
                 "REDIS_PORT",
                 "REDIS_PASSWORD",
                 "CHROMA_URL",
+                "CHROMA_TENANT",
+                "CHROMA_DATABASE",
                 "BRAINOS_STORAGE_PATH",
                 "BRAINOS_ADMIN_PASSWORD",
                 "BRAINOS_JWT_SECRET"
@@ -125,6 +136,12 @@ class ConfigurationContractTest {
                             .isEqualTo("redis-secret");
                     assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.base-url"))
                             .isEqualTo("https://chroma.internal");
+                    assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.api-key"))
+                            .isEqualTo("cloud-secret");
+                    assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.tenant"))
+                            .isEqualTo("tenant-123");
+                    assertThat(context.getEnvironment().getRequiredProperty("brainos.chroma.database"))
+                            .isEqualTo("brainos-prod");
                     assertThat(context.getEnvironment().getRequiredProperty("brainos.storage.root"))
                             .isEqualTo("/srv/brainos/uploads");
                     assertThat(context.getEnvironment().getRequiredProperty("brainos.auth.jwt.secret"))
@@ -144,9 +161,27 @@ class ConfigurationContractTest {
     }
 
     @Test
+    void chromaCloudRejectsMissingApiKey() {
+        contextRunner
+                .withPropertyValues(
+                        "spring.profiles.active=dev",
+                        "CHROMA_URL=https://api.trychroma.com",
+                        "CHROMA_TENANT=tenant-123",
+                        "CHROMA_DATABASE=brainos")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(rootCause(context.getStartupFailure()).getMessage())
+                            .contains("CHROMA_API_KEY");
+                });
+    }
+
+    @Test
     void environmentExampleDocumentsJwtSecretOverride() throws Exception {
         assertThat(Files.readString(RepositoryFiles.find(".env.example")))
                 .contains("BRAINOS_JWT_SECRET=")
+                .contains("CHROMA_API_KEY=")
+                .contains("CHROMA_TENANT=")
+                .contains("CHROMA_DATABASE=")
                 .contains("Required when running the backend with any profile other than dev");
     }
 

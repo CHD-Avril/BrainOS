@@ -16,8 +16,10 @@ import org.springframework.stereotype.Service;
 public class RagPlanningService {
 
     public static final String NO_RELIABLE_EVIDENCE = "当前知识库中未找到可靠依据";
-    private static final int TOP_K = 5;
+    private static final int TOP_K = 8;
+    private static final int MAX_CONTEXT_CANDIDATES = 5;
     private static final double CANDIDATE_THRESHOLD = 0.25d;
+    private static final double MAX_SEMANTIC_SCORE_GAP = 0.12d;
     private static final int MIN_EXACT_PHRASE_LENGTH = 4;
 
     private final RagRetriever retriever;
@@ -45,11 +47,23 @@ public class RagPlanningService {
         if (citations.stream().anyMatch(candidate -> candidate.knowledgeBaseId() != knowledgeBaseId)) {
             throw new IllegalStateException("检索结果知识库不一致");
         }
-        List<CitationCandidate> reliable = citations.stream()
-                .filter(candidate -> candidate.score() >= threshold
-                        || hasExactPhrase(question, candidate.snippet()))
+        List<CitationCandidate> ranked = citations.stream()
                 .sorted(Comparator.comparingDouble(CitationCandidate::score).reversed())
                 .toList();
+        List<CitationCandidate> exactMatches = ranked.stream()
+                .filter(candidate -> hasExactPhrase(question, candidate.snippet()))
+                .limit(MAX_CONTEXT_CANDIDATES)
+                .toList();
+        boolean semanticSetIsTrusted = ranked.getFirst().score() >= threshold;
+        double semanticCutoff = ranked.getFirst().score() - MAX_SEMANTIC_SCORE_GAP;
+        List<CitationCandidate> reliable = !exactMatches.isEmpty()
+                ? exactMatches
+                : semanticSetIsTrusted
+                        ? ranked.stream()
+                                .filter(candidate -> candidate.score() >= semanticCutoff)
+                                .limit(MAX_CONTEXT_CANDIDATES)
+                                .toList()
+                        : List.of();
         return reliable.isEmpty()
                 ? RagAnswerPlan.fallback(NO_RELIABLE_EVIDENCE)
                 : RagAnswerPlan.grounded(reliable);

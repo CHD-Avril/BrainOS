@@ -57,10 +57,22 @@ DEEPSEEK_API_KEY=你的_DeepSeek_API_Key
 
 不要将真实密钥提交到 Git。千问 Key 用于文档 Embedding 和默认问答；没有 Key 时仍可启动并演示管理功能，但无法完成真实索引与问答。
 
+使用 Chroma Cloud 时，再从 Cloud 数据库的连接页填入：
+
+```dotenv
+CHROMA_URL=https://api.trychroma.com
+CHROMA_API_KEY=你的_Chroma_Cloud_API_Key
+CHROMA_TENANT=你的_Tenant_ID
+CHROMA_DATABASE=你的_Database_Name
+```
+
+留空 `CHROMA_API_KEY` 并保持 `.env.example` 中的默认值，则继续使用本地 Chroma。本地与 Cloud 是两个独立索引，切换后必须重新上传或重建文档索引。
+
 ### 3. 启动基础设施
 
 ```bash
-docker compose up -d --wait mysql redis chroma
+docker compose up -d --wait mysql redis
+# 仅使用本地 Chroma 时再启动：docker compose up -d --wait chroma
 docker compose ps
 ```
 

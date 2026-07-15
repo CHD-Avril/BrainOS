@@ -70,6 +70,32 @@ class DocumentChunkerTest {
     }
 
     @Test
+    void keepsMarkdownPolicySectionsIndependent() {
+        DocumentChunker chunker = new DocumentChunker(500, 80);
+        String handbook = """
+            # 员工手册
+            演示资料。
+
+            ## 1. 工作时间
+            标准工作时间为周一至周五 09:00–18:00。
+
+            ## 2. 信息安全
+            发现可疑邮件或数据泄露后，应立即联系信息安全负责人。
+            """;
+
+        List<DocumentChunk> chunks = chunker.chunk(
+            2L, 9L, "handbook.md", List.of(new ParsedSection(handbook, null)));
+
+        assertThat(chunks).hasSize(3);
+        assertThat(chunks.get(1).text())
+            .contains("09:00–18:00")
+            .doesNotContain("数据泄露");
+        assertThat(chunks.get(2).text())
+            .contains("数据泄露")
+            .doesNotContain("09:00–18:00");
+    }
+
+    @Test
     void preservesShortUsableTextAndRejectsDocumentsWithoutText() {
         DocumentChunker chunker = new DocumentChunker(500, 80);
 

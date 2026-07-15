@@ -31,13 +31,6 @@ record RequiredRedisProperties(
         String password) {}
 
 @Validated
-@ConfigurationProperties(prefix = "brainos.chroma")
-record RequiredChromaProperties(
-        @NotBlank
-        @Pattern(regexp = "^(?!\\$\\{).+$", message = "CHROMA_URL must be provided")
-        String baseUrl) {}
-
-@Validated
 @ConfigurationProperties(prefix = "brainos.storage")
 record RequiredStorageProperties(
         @NotBlank

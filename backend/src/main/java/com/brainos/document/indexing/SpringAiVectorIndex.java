@@ -16,21 +16,44 @@ import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 public final class SpringAiVectorIndex implements VectorIndexPort {
 
     public static final String COLLECTION_NAME = "brainos_documents";
-    private static final String TENANT_NAME = "default_tenant";
-    private static final String DATABASE_NAME = "default_database";
+    private static final String LOCAL_TENANT = "default_tenant";
+    private static final String LOCAL_DATABASE = "default_database";
     private static final String DISTANCE_METADATA_KEY = "hnsw:space";
     private static final String DISTANCE_FUNCTION = "cosine";
     private static final int MAX_TOP_K = 100;
 
     private final ChromaApi chromaApi;
+    private final String tenant;
+    private final String database;
     private final EmbeddingPort embeddings;
     private volatile String collectionId;
 
     public SpringAiVectorIndex(String baseUrl, EmbeddingPort embeddings) {
+        this(baseUrl, "", LOCAL_TENANT, LOCAL_DATABASE, embeddings);
+    }
+
+    public SpringAiVectorIndex(
+            String baseUrl,
+            String apiKey,
+            String tenant,
+            String database,
+            EmbeddingPort embeddings) {
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new IllegalArgumentException("Chroma base URL must not be blank");
         }
-        this.chromaApi = ChromaApi.builder().baseUrl(stripTrailingSlash(baseUrl)).build();
+        if (tenant == null || tenant.isBlank()) {
+            throw new IllegalArgumentException("Chroma tenant must not be blank");
+        }
+        if (database == null || database.isBlank()) {
+            throw new IllegalArgumentException("Chroma database must not be blank");
+        }
+        ChromaApi api = ChromaApi.builder().baseUrl(stripTrailingSlash(baseUrl)).build();
+        if (apiKey != null && !apiKey.isBlank()) {
+            api = api.withKeyToken(apiKey);
+        }
+        this.chromaApi = api;
+        this.tenant = tenant;
+        this.database = database;
         this.embeddings = Objects.requireNonNull(embeddings, "embeddings must not be null");
     }
 
@@ -47,8 +70,8 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
                 safeChunks.stream().map(DocumentChunk::text).toList());
         validateVectors(vectors, safeChunks.size());
         chromaApi.upsertEmbeddings(
-                TENANT_NAME,
-                DATABASE_NAME,
+                tenant,
+                database,
                 collectionId(),
                 new ChromaApi.AddEmbeddingsRequest(
                         safeChunks.stream().map(DocumentChunk::id).toList(),
@@ -64,8 +87,8 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
         validateQuery(query, topK, threshold);
         Map<String, Object> where = whereEquals("knowledgeBaseId", knowledgeBaseId);
         ChromaApi.QueryResponse response = chromaApi.queryCollection(
-                TENANT_NAME,
-                DATABASE_NAME,
+                tenant,
+                database,
                 collectionId(),
                 new ChromaApi.QueryRequest(query.clone(), topK, where));
         return toResults(response, threshold);
@@ -75,8 +98,8 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
     public void deleteDocument(long documentId) {
         requirePositive(documentId, "documentId");
         chromaApi.deleteEmbeddings(
-                TENANT_NAME,
-                DATABASE_NAME,
+                tenant,
+                database,
                 collectionId(),
                 new ChromaApi.DeleteEmbeddingsRequest(
                         null, whereEquals("documentId", documentId)));
@@ -124,11 +147,11 @@ public final class SpringAiVectorIndex implements VectorIndexPort {
                 current = collectionId;
                 if (current == null) {
                     ChromaApi.Collection collection = chromaApi.getCollection(
-                            TENANT_NAME, DATABASE_NAME, COLLECTION_NAME);
+                            tenant, database, COLLECTION_NAME);
                     if (collection == null) {
                         collection = chromaApi.createCollection(
-                                TENANT_NAME,
-                                DATABASE_NAME,
+                                tenant,
+                                database,
                                 new ChromaApi.CreateCollectionRequest(
                                         COLLECTION_NAME,
                                         Map.of(DISTANCE_METADATA_KEY, DISTANCE_FUNCTION)));

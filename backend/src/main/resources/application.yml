@@ -62,6 +62,9 @@ brainos:
       secret: ${BRAINOS_JWT_SECRET:BrainOS-dev-only-jwt-secret-change-before-production}
   chroma:
     base-url: ${CHROMA_URL:http://localhost:8000}
+    tenant: ${CHROMA_TENANT:default_tenant}
+    database: ${CHROMA_DATABASE:default_database}
+    api-key: ${CHROMA_API_KEY:}
   storage:
     root: ${BRAINOS_STORAGE_PATH:./data/uploads}
   admin:
@@ -88,6 +91,9 @@ brainos:
       secret: ${BRAINOS_JWT_SECRET}
   chroma:
     base-url: ${CHROMA_URL}
+    tenant: ${CHROMA_TENANT}
+    database: ${CHROMA_DATABASE}
+    api-key: ${CHROMA_API_KEY:}
   storage:
     root: ${BRAINOS_STORAGE_PATH}
   admin:
