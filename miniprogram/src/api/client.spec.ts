@@ -34,4 +34,27 @@ describe('ApiClient', () => {
     expect(transport.request.mock.calls.filter(([arg]) => arg.url.endsWith('/auth/refresh'))).toHaveLength(1)
     expect(sessions.write).toHaveBeenCalledWith(refreshed)
   })
+
+  it('shares refresh coordination for simultaneous authorized adapter operations', async () => {
+    const refreshed = { ...session, accessToken: 'upload-access', refreshToken: 'upload-refresh' }
+    const transport = { request: vi.fn().mockResolvedValue({
+      statusCode: 200,
+      data: { code: 'OK', message: 'success', data: refreshed, traceId: 'r', timestamp: '2026-07-15T00:00:00Z' },
+    }) }
+    const client = new ApiClient({
+      baseUrl: 'https://api.example/api/v1',
+      transport,
+      sessions: { read: () => session, write: vi.fn(), clear: vi.fn() },
+      onExpired: vi.fn(),
+    })
+    const operation = vi.fn(async (token: string) => token === 'old-access'
+      ? { statusCode: 401 }
+      : { statusCode: 200, value: token })
+
+    await expect(Promise.all([
+      client.runAuthorized(operation),
+      client.runAuthorized(operation),
+    ])).resolves.toEqual(['upload-access', 'upload-access'])
+    expect(transport.request).toHaveBeenCalledTimes(1)
+  })
 })

@@ -50,6 +50,20 @@ export class ApiClient {
     return this.execute<T>(options, true)
   }
 
+  async runAuthorized<T>(operation: (accessToken: string) => Promise<{ statusCode: number; value?: T; error?: ApiError }>): Promise<T> {
+    const session = this.options.sessions.read()
+    if (!session) throw new ApiError('请先登录', 401, 'UNAUTHORIZED')
+    let result = await operation(session.accessToken)
+    if (result.statusCode === 401) {
+      const refreshed = await this.refresh(session.refreshToken)
+      result = await operation(refreshed.accessToken)
+    }
+    if (result.statusCode < 200 || result.statusCode >= 300) {
+      throw result.error ?? new ApiError('请求失败', result.statusCode, 'HTTP_ERROR')
+    }
+    return result.value as T
+  }
+
   private async execute<T>(options: RequestOptions, mayRefresh: boolean): Promise<T> {
     const session = this.options.sessions.read()
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
