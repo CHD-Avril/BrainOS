@@ -138,6 +138,12 @@ class AdminControllerIT {
                 .andExpect(jsonPath("$.data.items[0].username").value("admin-owner"))
                 .andExpect(jsonPath("$.data.items[0].targetId").value(Long.toString(createdId)))
                 .andExpect(jsonPath("$.data.items[0].summary").value("停用用户"));
+
+        mvc.perform(get("/api/v1/admin/audit-logs")
+                        .param("username", "ordinary-user")
+                        .header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
     }
 
     @Test

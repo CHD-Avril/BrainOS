@@ -39,7 +39,9 @@ describe('LoginView', () => {
 
     expect(wrapper.text()).toContain('BrainOS')
     expect(wrapper.get('h1').text()).toBe('登录 BrainOS')
+    expect(wrapper.text()).toContain('登录用户名')
     expect(wrapper.find('[aria-label="用户名"]').exists()).toBe(true)
+    expect(wrapper.get('[aria-label="用户名"]').attributes('placeholder')).toBe('例如 user（不是显示名称）')
     expect(wrapper.find('[aria-label="密码"]').exists()).toBe(true)
     expect(wrapper.get('button[type="submit"]').text()).toContain('登录')
     expect(wrapper.text()).not.toContain('使用企业账号进入知识管理工作台')
@@ -76,7 +78,10 @@ describe('LoginView', () => {
   })
 
   it('shows only the generic authentication error when the API rejects', async () => {
-    vi.mocked(authApi.login).mockRejectedValue(new Error('internal database detail'))
+    vi.mocked(authApi.login).mockRejectedValue(Object.assign(new Error('internal database detail'), {
+      isAxiosError: true,
+      response: { status: 401 },
+    }))
     const { wrapper } = await renderLogin()
 
     await wrapper.get('[aria-label="用户名"]').setValue('admin')
@@ -86,6 +91,20 @@ describe('LoginView', () => {
 
     expect(wrapper.text()).toContain('用户名或密码错误，请重试')
     expect(wrapper.text()).not.toContain('internal database detail')
+  })
+
+  it('reports service unavailability instead of blaming valid credentials', async () => {
+    vi.mocked(authApi.login).mockRejectedValue(new Error('Network Error'))
+    const { wrapper } = await renderLogin()
+
+    await wrapper.get('[aria-label="用户名"]').setValue('admin')
+    await wrapper.get('[aria-label="密码"]').setValue('BrainOS@123')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('登录服务暂时不可用，请稍后重试')
+    expect(wrapper.text()).not.toContain('用户名或密码错误')
+    expect(wrapper.text()).not.toContain('Network Error')
   })
 
   it('ignores duplicate submissions while login is pending', async () => {

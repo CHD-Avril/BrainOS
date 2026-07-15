@@ -225,8 +225,14 @@ function formatTime(value: string | null): string {
 
     <el-dialog v-model="dialogOpen" :title="editing ? '编辑用户' : '新建用户'" width="500px" destroy-on-close>
       <el-form label-position="top" @submit.prevent="submit">
-        <el-form-item label="用户名" :error="errors.username">
-          <el-input v-model="form.username" aria-label="用户名" :disabled="Boolean(editing)" maxlength="32" />
+        <el-form-item label="登录用户名" :error="errors.username">
+          <el-input
+            v-model="form.username"
+            aria-label="用户名"
+            placeholder="小写字母开头，例如 user"
+            :disabled="Boolean(editing)"
+            maxlength="32"
+          />
         </el-form-item>
         <el-form-item label="显示名称" :error="errors.displayName">
           <el-input v-model="form.displayName" aria-label="显示名称" maxlength="100" />

@@ -24,6 +24,7 @@ public class AuditLogController {
     @GetMapping
     public ApiResponse<PagedResult<AuditLogView>> list(
             @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String username,
             @RequestParam(required = false) String action,
             @RequestParam(required = false)
                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
@@ -31,6 +32,6 @@ public class AuditLogController {
                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success(audits.list(userId, action, from, to, page, size));
+        return ApiResponse.success(audits.list(userId, username, action, from, to, page, size));
     }
 }

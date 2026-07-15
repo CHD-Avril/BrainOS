@@ -19,6 +19,7 @@ export interface AuditLog {
 
 export interface AuditQuery {
   userId?: number
+  username?: string
   action?: string
   from?: string
   to?: string

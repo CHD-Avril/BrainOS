@@ -22,7 +22,7 @@ const error = ref('')
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
-const filters = reactive({ userId: '', action: '', range: [] as Date[] })
+const filters = reactive({ operator: '', action: '', range: [] as Date[] })
 
 onMounted(load)
 
@@ -30,8 +30,13 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = ''
   try {
+    const operator = filters.operator.trim()
     const result = await auditApi.list({
-      ...(filters.userId ? { userId: Number(filters.userId) } : {}),
+      ...(operator
+        ? /^\d+$/.test(operator)
+          ? { userId: Number(operator) }
+          : { username: operator }
+        : {}),
       ...(filters.action ? { action: filters.action } : {}),
       ...(filters.range[0] ? { from: filters.range[0].toISOString() } : {}),
       ...(filters.range[1] ? { to: filters.range[1].toISOString() } : {}),
@@ -42,6 +47,8 @@ async function load(): Promise<void> {
     total.value = result.total
   }
   catch {
+    rows.value = []
+    total.value = 0
     error.value = '操作日志加载失败，请重试'
   }
   finally {
@@ -55,7 +62,7 @@ function search(): void {
 }
 
 function resetFilters(): void {
-  filters.userId = ''
+  filters.operator = ''
   filters.action = ''
   filters.range = []
   page.value = 1
@@ -97,7 +104,12 @@ function formatTime(value: string): string {
     </header>
 
     <div class="filter-panel">
-      <el-input v-model="filters.userId" aria-label="操作人 ID" placeholder="操作人 ID" clearable />
+      <el-input
+        v-model="filters.operator"
+        aria-label="操作人用户名或 ID"
+        placeholder="用户名或 ID"
+        clearable
+      />
       <el-select v-model="filters.action" aria-label="操作类型" placeholder="操作类型" clearable>
         <el-option v-for="option in actionOptions" :key="option[0]" :label="option[1]" :value="option[0]" />
       </el-select>
@@ -109,7 +121,7 @@ function formatTime(value: string): string {
         range-separator="至"
         aria-label="日志时间范围"
       />
-      <el-button type="primary" :icon="Search" @click="search">查询</el-button>
+      <el-button data-test="audit-search" type="primary" :icon="Search" @click="search">查询</el-button>
       <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
     </div>
 

@@ -55,6 +55,7 @@ describe('UserAdminView', () => {
 
     await wrapper.get('[data-test="create-user"]').trigger('click')
     await flushPromises()
+    expect(document.body.textContent).toContain('登录用户名')
     expect(document.body.textContent).toContain('初始密码')
     expect(document.body.textContent).toContain('普通用户')
   })
