@@ -91,14 +91,55 @@ docker compose --profile web up -d nginx
 2. 将 `deploy/nginx/brainos.conf` 复制到 `/etc/nginx/conf.d/brainos.conf`，按需调整 `upstream` 后端地址与 `server_name`。
 3. 执行 `nginx -t && nginx -s reload`。
 
-## 4. 数据与恢复
+## 4. 微信小程序部署
+
+微信小程序继续复用现有 Spring Boot `/api/v1/**`，生产链路应为“微信小程序 → HTTPS 公网域名/Nginx → Spring Boot”。PC Web 可继续由同一 Nginx 托管，两端共享 MySQL、Redis、Chroma 与 AI 服务。
+
+### 4.1 HTTPS 与微信合法域名
+
+- 在公网域名上终止 HTTPS，使用受信任且完整的证书链；生产环境不得使用 `localhost`、局域网地址或自签名证书。
+- 在微信公众平台将同一 API 主机名同时配置为 `request` 合法域名和 `uploadFile` 合法域名。
+- `request` 承载登录、知识库、文档查询和问答；`uploadFile` 承载 `uni.uploadFile` 文档上传。
+- 开发者工具的“不校验合法域名”开关仅供临时模拟，不能替代真机与发布配置。
+
+### 4.2 Nginx 分块交付
+
+SSE location 必须保留 `proxy_http_version 1.1`、空的上游 `Connection`、`proxy_buffering off`、`proxy_cache off` 和 3600 秒读写超时。不要配置 `chunked_transfer_encoding off`，否则微信端 `onChunkReceived` 可能无法及时收到分块。
+
+部署前在仓库根目录执行：
+
+```powershell
+powershell -File scripts/verify-miniprogram-proxy.ps1
+```
+
+微信端使用现有 `/api/v1/chat/sessions/{id}/messages/stream`：支持时以 `enableChunked` + `onChunkReceived` 增量展示；不支持分块监听时，等待同一请求完成后解析整段响应，不需要新增后端协议。
+
+### 4.3 环境配置与构建
+
+```powershell
+Set-Location miniprogram
+Copy-Item .env.production.example .env.production.local
+# 编辑 .env.production.local，设置证书有效且已登记的 HTTPS API 域名
+pnpm install --frozen-lockfile
+pnpm test
+pnpm typecheck
+pnpm build:mp-weixin
+```
+
+`VITE_API_BASE_URL` 填写主机根地址即可，客户端会补全 `/api/v1`。真实域名、AppID、AppSecret、令牌和证书不得提交到 Git。
+
+### 4.4 微信开发者工具与真机
+
+在微信开发者工具中导入 `miniprogram/dist/build/mp-weixin`，并仅在本地开发配置中填写真实 AppID。上传发布前，按 [小程序真机验收清单](../miniprogram/README.md#真机验收清单) 验证登录刷新、知识库 CRUD、文档上传/轮询/重试/删除、分块与回退问答、引用、停止和退出。
+
+## 5. 数据与恢复
 
 - MySQL：定期执行逻辑备份，Flyway 只管理表结构变更。
 - Chroma：备份持久化目录；也可保留原文档后重建索引。
 - 文档：备份 `BRAINOS_STORAGE_PATH` 指向的目录。
 - Redis：只保存可撤销的刷新令牌，丢失后用户重新登录即可。
 
-## 5. 上线检查
+## 6. 上线检查
 
 1. `bash scripts/verify.sh` 全部通过。
 2. `/actuator/health` 返回 `UP`。
